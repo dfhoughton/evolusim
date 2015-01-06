@@ -680,7 +680,6 @@ class Animal extends Organism
       influence = @affinity other
       if influence
         data = @otherData other
-        @reactToOther other, data
         influence /= Math.pow( data.distance, 2 )
         influence *= @g()
         [ xa, ya ] = data.vector influence
@@ -701,7 +700,6 @@ class Animal extends Organism
         vx *= f
         vy *= f
       @velocity = [ vx, vy ]
-      @postReact()
       @universe.moveThing @
   # influencing entities nearby
   auditoryRange: -> @genes.auditoryRange[0]
@@ -710,9 +708,6 @@ class Animal extends Organism
     seen = {}
     nearby = @universe.near @, 1, @auditoryRange(), seen, candidates
     nearby.concat @universe.near @, @angle, @visualRange(), seen, candidates
-  # reaction hook for prepare for call to reactToOther
-  postReact: ->
-  # reaction hook for changing state based on other reacted to
   reactToOther: ( other, data ) ->
   prey: (other) ->
     false
