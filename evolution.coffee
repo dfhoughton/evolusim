@@ -26,7 +26,7 @@ class Universe
     @idBase = 0
     @tick   = 0
     @pause = options.pause || 0 
-    @recalculateGeometries = options.responsive ? @responsiveRecalculate : @fastRecalculate
+    @recalculateGeometries = if options.responsive then @responsiveRecalculate else @fastRecalculate
     @minDistance = options.minDistance || Math.round( Math.max( @width, @height ) / 3 )
     @callback = options.callback || ->
     dic = @defaults().initialCreatures
