@@ -4,8 +4,8 @@ class Universe
   defaults: ->
     width: 500
     height: 500
-    pause: 100
-    minDistance: 80
+    pause: 0
+    minDistance: 60
     initialCreatures:
       stones: num: 30
       plants: num: 60
@@ -24,6 +24,9 @@ class Universe
     @dotCache = {}
     @thingMap = {}
     @idBase = 0
+    @tick   = 0
+    @pause = options.pause || 0 
+    @recalculateGeometries = options.responsive ? @responsiveRecalculate : @fastRecalculate
     @minDistance = options.minDistance || Math.round( Math.max( @width, @height ) / 3 )
     @callback = options.callback || ->
     dic = @defaults().initialCreatures
@@ -60,19 +63,44 @@ class Universe
     rightThings[ ~~( Math.random() * rightThings.length )]
   addThing: (thing) ->
     thing.id = @idBase += 1
+    animal = thing instanceof Animal
     m = @thingMap[thing.id] = thing: thing, others: {}
     for t in @things
-      @trig thing, t, m
+      @trig thing, t, m if animal || t instanceof Animal
     @things.push thing
-  recalculateGeometries: ->
+  # do all recalculations without yielding any time to browser events
+  fastRecalculate: ->
     map = @thingMap = {}
     fresh = []
-    for t in @things
-      m = map[t.id] = thing: t, others: {}
-      for other in fresh
-        @trig t, other, m
-      fresh.push t
-    @things = fresh
+    setTimeout(
+      =>
+        for t in @things
+          animal = t instanceof Animal
+          m = map[t.id] = thing: t, others: {}
+          for other in fresh
+            @trig t, other, m if animal || other instanceof Animal
+          fresh.push t
+        @things = fresh
+        @afterGeometry()
+      0
+    )
+  # yield frequently to the browser while recalculating events
+  responsiveRecalculate: ->
+    map = @thingMap = {}
+    fresh = []
+    nextThing = =>
+      if @things.length
+        t = @things.shift()
+        animal = t instanceof Animal
+        m = map[t.id] = thing: t, others: {}
+        for other in fresh
+          @trig t, other, m if animal || other instanceof Animal
+        fresh.push t
+        setTimeout nextThing, 0
+      else
+        @things = fresh
+        @afterGeometry()
+    nextThing()
   remThing: (thing) ->
     thing.dead = true
     for i in [0...@things.length]
@@ -126,13 +154,6 @@ class Universe
   run: ->
     @running = true
     @go()
-  # perform the actions of one moment in time
-  go: ->
-    @tick()
-    setInterval(
-      => @go() if @running
-      @pause
-    )
   # calculate and store the geometric relationship between two things
   trig: ( t, o, m ) ->
     mo = @thingMap[o.id]
@@ -192,7 +213,6 @@ class Universe
   dot: (radius) ->
     radius = Math.round radius
     @dotCache[radius] ||= ( =>
-      x = y = 0
       boundary = @topLeftArc radius
       points = []
       cherry = boundary.shift() if boundary[0][0] == 0
@@ -201,8 +221,8 @@ class Universe
       # mirror top and bottom
       for i in [(boundary.length - 2)..0]
         [ p1, p2 ] = boundary[i]
-        y2 = 2 * y - p1[1]
-        boundary.push [ [ p1[0], y2 ], [ p2[0], y2 ] ]
+        y = -p1[1]
+        boundary.push [ [ p1[0], y ], [ p2[0], y ] ]
       # convert each pair of boundary points into a row of boundary and interior points
       for row in boundary
         [ p1, p2 ] = row
@@ -212,8 +232,7 @@ class Universe
         points.push p2
       if cherry
         points.unshift cherry
-        y += radius
-        points.push [ x, y ]
+        points.push [ 0, radius ]
       points
     )()
   # collects the points in the universe within radius of (x,y)
@@ -223,20 +242,47 @@ class Universe
     points = map @dot(radius), (p) -> [ p[0] + x, p[1] + y ]
     w = @width
     h = @height
-    grep points, (p) -> 0 <= p[0] < w && 0 <= p[1] < h
+    if x - radius < 0 || x + radius >= w || y - radius < 0 || y + radius >= h
+      grep points, (p) -> 0 <= p[0] < w && 0 <= p[1] < h
+    else
+      points
   # profiling utility
   time: ( obj, name, time ) ->
     now = new Date()
     obj[name] = now.getTime() - time.getTime()
     now
-  # the steps involved in one tick of the universe's clock
-  tick: ->
-    @move()
-    @recalculateGeometries()
-    @die()
-    @babies()
-    @draw()
-    @callback(@)
+  # the steps involved in one go of the universe's clock
+  go: ->
+    @tick += 1
+    self = @
+    self.move()
+    setTimeout(
+      -> self.recalculateGeometries()
+      0
+    )
+  afterGeometry: ->
+    self = @
+    self.die()
+    setTimeout(
+      ->
+        self.babies()
+        setTimeout(
+          ->
+            self.draw()
+            setTimeout(
+              ->
+                self.callback(self)
+                if self.running
+                  setTimeout(
+                    -> self.go()
+                    self.pause
+                  )
+              0
+            )
+          0
+        )
+      0
+    )
   # anything that is starving or eaten perishes
   die: ->
     for t in shuffle @things, true
@@ -258,7 +304,9 @@ class Universe
   move: ->
     t.react() for t in @things
   # all surviving things that are able to reproduce
-  makeCradles: -> map [0...@width], => map( [0...@height], -> true )
+  makeCradles: ->
+    column = map [0...@height], -> true
+    map [0...@width], -> [].concat column
   babies: ->
     cradles = @makeCradles()
     orchards = @makeCradles()
@@ -429,13 +477,18 @@ class Stone extends Thing
 class Organism extends Thing
   constructor: ( location, options = {} ) ->
     super location, options
-    @genes  ||= @defaultGenes()
-    @hp     ||= @health() / 2
+    @genes      ||= @defaultGenes()
+    @hp         ||= @health() / 2
+    @generation ||= 1
     @radius = options.radius || 5
+    @tick   = @universe.tick
+    @babies = 0
   describe: ->
     description = super()
     description.health = @health()
     description.hp = @hp
+    description.tick = @tick
+    description.babies = @babies
     genes = description.genes = {}
     for k, v of @genes
       v = v[0]
@@ -547,12 +600,14 @@ class Organism extends Thing
             baby = new @type( 
               pt
               {
-                universe: @universe
-                genes:    genes
-                hp:       @babyCost()
-                radius:   @radius
+                universe:   @universe
+                genes:      genes
+                hp:         @babyCost()
+                radius:     @radius
+                generation: @generation + 1
               }
             )
+            @babies += 1
             # clean the cradles for the next one
             @universe.removeCradles cradles, @universe.pointsNear( baby.x, baby.y, baby.radius * 2 )
             break
@@ -576,9 +631,9 @@ class Animal extends Organism
     @type = Animal
   defaultGenes: ->
     @mergeGenes super(), {
-      auditoryRange: [ Math.min( @universe.minDistance, 20 ), 10, Math.min( 200, @universe.minDistance ) ]
+      auditoryRange: [ Math.min( @universe.minDistance / 3, 20 ), 10, @universe.minDistance / 2 ]
       visualAngle: [ .45, .1, 1 ]
-      visualRange: [ @universe.minDistance / 2 , 10, @universe.minDistance ]
+      visualRange: [ Math.min( @universe.minDistance / 2 , 30 ), 20, @universe.minDistance ]
       g: [ 250, 1, 5000 ]
       jitter: [ .05, 0.01, 1 ]
       kinAffinity: [

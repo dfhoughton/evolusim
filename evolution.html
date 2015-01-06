@@ -31,18 +31,22 @@
       }
       makeUniverse();
       var evoData = {
-        names: [ 'Plant', 'Herbivore', 'Carnivore' ],
-        rows: []
+        generation: 0,
+        population: {
+          names: [ 'Plant', 'Herbivore', 'Carnivore' ],
+          rows: []
+        }
       };
       function collectData(u) {
+        evoData.generation += 1;
         var stats = u.describe();
         var counts = { Plant: 0, Herbivore: 0, Carnivore: 0 };
         for ( var i = 0; i < stats.length; i += 1 ) {
           description = stats[i];
           counts[description['type']] += 1;
         }
-        var row = [ evoData.rows.length + 1, counts.Plant, counts.Herbivore, counts.Carnivore ];
-        evoData.rows.push(row);
+        var row = [ evoData.generation, counts.Plant, counts.Herbivore, counts.Carnivore ];
+        evoData.population.rows.push(row);
         drawChart();
       }
       function restart() {
@@ -61,20 +65,29 @@
       google.load('visualization', '1', {packages: ['corechart']});
       google.setOnLoadCallback(drawChart);
 
+      function trimData(data) {
+        if (data.length < 500) return data;
+        results = 0;
+        for ( var i = data.length - 500; i < data.length; i += 1 ) {
+          results.push(data[i]);
+        }
+        return results;
+      }
+
       function drawChart() {
 
         var data = new google.visualization.DataTable();
         data.addColumn( 'number', 'X' );
-        for ( var i = 0; i < evoData.names.length; i += 1 ) {
-          data.addColumn( 'number', evoData.names[i] );
+        for ( var i = 0; i < evoData.population.names.length; i += 1 ) {
+          data.addColumn( 'number', evoData.population.names[i] );
         }
-        data.addRows(evoData.rows);
+        data.addRows(evoData.population.rows);
 
         var options = {
           width: 1000,
-          height: 563,
+          height: 500,
           hAxis: {
-            title: 'Time'
+            title: 'Time (ticks)'
           },
           vAxis: {
             title: 'Population'
