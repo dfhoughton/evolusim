@@ -22,7 +22,6 @@ class Universe
     @maxDim = Math.max @width, @height
     @things = []
     @dotCache = {}
-    @thingMap = {}
     @idBase = 0
     @tick   = 0
     @pause = options.pause || 0 
@@ -64,21 +63,18 @@ class Universe
   addThing: (thing) ->
     thing.id = @idBase += 1
     animal = thing instanceof Animal
-    m = @thingMap[thing.id] = thing: thing, others: {}
     for t in @things
-      @trig thing, t, m if animal || t instanceof Animal
+      @trig thing, t if animal || t instanceof Animal
     @things.push thing
   # do all recalculations without yielding any time to browser events
   fastRecalculate: ->
-    map = @thingMap = {}
     fresh = []
     setTimeout(
       =>
         for t in @things
           animal = t instanceof Animal
-          m = map[t.id] = thing: t, others: {}
           for other in fresh
-            @trig t, other, m if animal || other instanceof Animal
+            @trig t, other if animal || other instanceof Animal
           fresh.push t
         @things = fresh
         @afterGeometry()
@@ -86,15 +82,13 @@ class Universe
     )
   # yield frequently to the browser while recalculating events
   responsiveRecalculate: ->
-    map = @thingMap = {}
     fresh = []
     nextThing = =>
       if @things.length
         t = @things.shift()
         animal = t instanceof Animal
-        m = map[t.id] = thing: t, others: {}
         for other in fresh
-          @trig t, other, m if animal || other instanceof Animal
+          @trig t, other if animal || other instanceof Animal
         fresh.push t
         setTimeout nextThing, 0
       else
@@ -108,8 +102,7 @@ class Universe
       if t.id == thing.id
         @things.splice i, 1
         break
-    delete @thingMap[thing.id]
-    for k, t of @thingMap
+    for t in @things
       delete t.others[thing.id]
   # moves a thing based on that things velocity, handling reflection off
   # the edges of the universe
@@ -155,13 +148,12 @@ class Universe
     @running = true
     @go()
   # calculate and store the geometric relationship between two things
-  trig: ( t, o, m ) ->
-    mo = @thingMap[o.id]
+  trig: ( t, o ) ->
     base = o.x - t.x
     height = o.y - t.y
     tp = new TrigPair(base, height, @minDistance)
-    m.others[o.id] = tp
-    mo.others[t.id] = tp.opposite()
+    t.others[o.id] = tp
+    o.others[t.id] = tp.opposite()
   # finds the things within a particular distance of a reference thing and within a certain
   # wedge around the direction of the things movement
   # if the thing has a visual angle of 1, or the thing is motionless, all things within the distance are returned
@@ -172,7 +164,7 @@ class Universe
       for t in candidates
         id = t.id
         continue if t.id == tid || seen[id]
-        data = @thingMap[id].others[tid]
+        data = thing.others[id]
         continue if data.tooFar
         if data.distance <= distance
           seen[id] = true
@@ -183,7 +175,7 @@ class Universe
         test = (tp) -> t1.le(tp) && t2.ge(tp)
       else
         test = (tp) -> !(t2.le(tp) && t1.ge(tp))
-      others = @thingMap[tid].others
+      others = thing.others
       for t in candidates
         id = t.id
         continue if id == tid || seen[id]
@@ -253,13 +245,14 @@ class Universe
     now
   # the steps involved in one go of the universe's clock
   go: ->
-    @tick += 1
-    self = @
-    self.move()
-    setTimeout(
-      -> self.recalculateGeometries()
-      0
-    )
+    unless @dead
+      @tick += 1
+      self = @
+      self.move()
+      setTimeout(
+        -> self.recalculateGeometries()
+        0
+      )
   afterGeometry: ->
     self = @
     self.die()
@@ -296,6 +289,11 @@ class Universe
           for other in t.touching()
             t.eat other if other instanceof Herbivore
       @remThing t if t instanceof Animal && t.hp <= 0
+    @dead = true
+    for t in @things
+      if t instanceof Organism
+        @dead = false
+        break
   # paint a moment in time
   draw: ->
     @erase()
@@ -416,6 +414,7 @@ class Thing
   constructor: ( location, options = {} ) ->
     throw "I need a universe!" unless options.universe
     @setAttributes options
+    @others = {}
     uni = @universe
     [ @x, @y ] = location
     @velocity = [ 0, 0 ]
@@ -671,7 +670,6 @@ class Animal extends Organism
     else
       @genes.maxAcceleration[0]
   maxSpeed: -> @maxSp ||= @maxAcceleration() * 1.5
-  otherData: (other) -> @universe.thingMap[@id].others[other.id]
   react: ->
     super()
     x = 0
@@ -679,7 +677,7 @@ class Animal extends Organism
     for other in @nearby()
       influence = @affinity other
       if influence
-        data = @otherData other
+        data = @others[other.id]
         influence /= Math.pow( data.distance, 2 )
         influence *= @g()
         [ xa, ya ] = data.vector influence
