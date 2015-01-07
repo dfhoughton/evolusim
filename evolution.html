@@ -51,6 +51,8 @@
       }
       function restart() {
         u.stop();
+        evoData.generation = 0;
+        evoData.population.rows = [];
         u.erase();
         makeUniverse();
         u.run();
@@ -67,7 +69,7 @@
 
       function trimData(data) {
         if (data.length < 500) return data;
-        results = 0;
+        results = [];
         for ( var i = data.length - 500; i < data.length; i += 1 ) {
           results.push(data[i]);
         }
@@ -81,7 +83,7 @@
         for ( var i = 0; i < evoData.population.names.length; i += 1 ) {
           data.addColumn( 'number', evoData.population.names[i] );
         }
-        data.addRows(evoData.population.rows);
+        data.addRows(trimData(evoData.population.rows));
 
         var options = {
           width: 1000,
