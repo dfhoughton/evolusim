@@ -21,6 +21,7 @@ class Universe
     @height = @canvas.height
     @maxDim = Math.max @width, @height
     @things = []
+    @trigPool = []
     @dotCache = {}
     @idBase = 0
     @tick   = 0
@@ -97,13 +98,18 @@ class Universe
     nextThing()
   remThing: (thing) ->
     thing.dead = true
+    for k, v of thing.others
+      @trigPool.push v
     for i in [0...@things.length]
       t = @things[i]
       if t.id == thing.id
         @things.splice i, 1
         break
     for t in @things
-      delete t.others[thing.id]
+      v = t.others[thing.id]
+      if v?
+        @trigPool.push v unless v.tooFar
+        delete t.others[thing.id]
   # moves a thing based on that things velocity, handling reflection off
   # the edges of the universe
   moveThing: (thing) ->
@@ -130,7 +136,9 @@ class Universe
     return unless thing.angle?
     theta = anglify vx, vy
     thing.angle = theta + thing.jitter()
-    delete thing.marges
+    if thing.marges
+      while thing.marges.length
+        @trigPool.push thing.marges.pop()
   # chooses a random location which does not currently contain anything
   randomLocation: (used) ->
     h = @height
@@ -147,13 +155,23 @@ class Universe
   run: ->
     @running = true
     @go()
+  tp: ( x, y, minDistance, distance ) ->
+    p = @trigPool.pop() || new TrigPair()
+    p.init( x, y, minDistance, distance )
+    p
   # calculate and store the geometric relationship between two things
   trig: ( t, o ) ->
     base = o.x - t.x
     height = o.y - t.y
-    tp = new TrigPair(base, height, @minDistance)
-    t.others[o.id] = tp
-    o.others[t.id] = tp.opposite()
+    ti = t.id
+    oi = o.id
+    t1 = t.others[oi]
+    t2 = o.others[ti]
+    @trigPool.push t1 if t1?
+    @trigPool.push t2 if t2? && !t2.tooFar
+    tp = @tp(base, height, @minDistance)
+    t.others[oi] = tp
+    o.others[ti] = tp.opposite(@)
   # finds the things within a particular distance of a reference thing and within a certain
   # wedge around the direction of the things movement
   # if the thing has a visual angle of 1, or the thing is motionless, all things within the distance are returned
@@ -363,7 +381,7 @@ shuffle = (ar, dup=false) ->
 
 # for easy angle comparison without converting sines and cosines to angles
 class TrigPair
-  constructor: ( x, y, minDistance, distance ) ->
+  init: ( x, y, minDistance, distance ) ->
     if distance?
       sine = @sine = x
       cosine = @cosine = y
@@ -402,9 +420,9 @@ class TrigPair
   vector: (magnitude) ->
     [ @width * magnitude, @height * magnitude ]
   # generates the counterpart of @ TrigPair after a 180 degree rotation
-  opposite: ->
+  opposite: (u) ->
     return @ if @tooFar
-    op = new TrigPair( -@sine, -@cosine, null, @distance )
+    op = u.tp( -@sine, -@cosine, null, @distance )
     op.width = -@width
     op.height = -@height
     op
@@ -457,13 +475,15 @@ class Thing
   touching: ->
     @universe.near @, @radius, 1
   margins: ->
-    @marges ||= do =>
-      fi = Math.PI * @visualAngle() / 2
-      t1 = @angle - fi
-      t1 = new TrigPair( Math.sin(t1), Math.cos(t1) )
-      t2 = @angle + fi
-      t2 = new TrigPair( Math.sin(t2), Math.cos(t2) )
-      [ t1, t2 ]
+    m = @marges ||= []
+    fi = Math.PI * @visualAngle() / 2
+    t1 = @angle - fi
+    t1 = @universe.tp( Math.sin(t1), Math.cos(t1) )
+    t2 = @angle + fi
+    t2 = @universe.tp( Math.sin(t2), Math.cos(t2) )
+    m.push t1
+    m.push t2
+    m
 
 class Stone extends Thing
   constructor: ( location, options = {} ) ->
