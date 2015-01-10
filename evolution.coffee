@@ -21,7 +21,8 @@ class Universe
     @height = @canvas.height
     @maxDim = Math.max @width, @height
     @things = []
-    @trigPool = []
+    @geoPool = [ 0 ]
+    @geoData = [ null ]
     @dotCache = {}
     @idBase = 0
     @tick   = 0
@@ -33,6 +34,74 @@ class Universe
     ic = @options.initialCreatures || dic
     uni = @
     used = {}
+
+    # geometry mechanism
+    @geo = {
+      # memory allocator
+      data: =>
+        if @geoPool.length > 1
+          offset = @geoPool.pop()
+        else
+          offset = @geoData.length
+          @geoData.push null for i in [1..4]
+        offset
+      # free memory -- useful for debugging
+      free: (offset) =>
+        @geoPool.push offset
+      calc: ( offset, x, y, minDistance, distance ) =>
+        if distance?
+          sine = x
+          cosine = y
+        else
+          unless tooFar = Math.abs(x) > minDistance || Math.abs(y) > minDistance
+            distance = Math.sqrt( Math.pow(x, 2) + Math.pow(y, 2) )
+            unless tooFar ||= distance > minDistance
+              sine = y / distance
+              cosine = x / distance
+        unless tooFar
+          segment = if sine == 0
+            if cosine == 1 then 0 else 4
+          else if sine == 1
+            2
+          else if sine == -1
+            6
+          else if sine > 0
+            if cosine > 0 then 1 else 3
+          else
+            if cosine > 0 then 7 else 5
+        if tooFar
+          @geoPool.push offset
+          0
+        else
+          @geoData[ offset ]     = distance
+          @geoData[ offset + 1 ] = sine
+          @geoData[ offset + 2 ] = cosine
+          @geoData[ offset + 3 ] = segment
+          offset
+      le: ( offset, other ) =>
+        s1 = @geoData[ offset + 3 ]
+        s2 = @geoData[ other + 3 ]
+        if s1 == s2
+          if s1 % 2 == 0
+            true
+          else
+            sine1 = @geoData[ offset + 1 ]
+            sine2 = @geoData[ offset + 1 ]
+            if s1 == 1 || s1 == 7 then sine1 <= sine2 else sine1 >= sine2
+        else
+          s1 - s2 > 4 || s1 < s2
+      ge: ( offset, other ) =>
+        @geo.le other, offset
+      # produces a vector in the TrigPair direction with the given magnitude
+      vector: ( offset, magnitude ) =>
+        [ @geoData[ offset + 2 ] * magnitude, @geoData[ offset + 1 ] * magnitude ]
+      # generates the counterpart of @ TrigPair after a 180 degree rotation
+      opposite: ( offset ) =>
+        return offset unless offset
+        op = @geo.data()
+        @geo.calc( op, -@geoData[ offset + 1 ], -@geoData[ offset + 2 ], null, @geoData[offset] )
+    }
+
     createCreatures = ( Cons, type ) ->
       crOpts = ic[type].opts || {}
       crOpts.universe = uni
@@ -57,6 +126,7 @@ class Universe
   getThings: (type) ->
     type = @getType type
     @things.filter (i) -> i instanceof type
+  # debugging method
   pickThing: (type) ->
     type = @getType type
     rightThings = @getThings type
@@ -72,6 +142,7 @@ class Universe
     fresh = []
     setTimeout(
       =>
+        t.clean() for t in @things
         for t in @things
           animal = t instanceof Animal
           for other in fresh
@@ -98,8 +169,10 @@ class Universe
     nextThing()
   remThing: (thing) ->
     thing.dead = true
-    for k, v of thing.others
-      @trigPool.push v
+    for v in ( thing.marges || [] )
+      @geoPool.push v
+    for k, v of thing.others when v
+      @geoPool.push v
     for i in [0...@things.length]
       t = @things[i]
       if t.id == thing.id
@@ -108,7 +181,7 @@ class Universe
     for t in @things
       v = t.others[thing.id]
       if v?
-        @trigPool.push v unless v.tooFar
+        @geoPool.push v if v
         delete t.others[thing.id]
   # moves a thing based on that things velocity, handling reflection off
   # the edges of the universe
@@ -138,7 +211,7 @@ class Universe
     thing.angle = theta + thing.jitter()
     if thing.marges
       while thing.marges.length
-        @trigPool.push thing.marges.pop()
+        @geoPool.push thing.marges.pop()
   # chooses a random location which does not currently contain anything
   randomLocation: (used) ->
     h = @height
@@ -156,9 +229,8 @@ class Universe
     @running = true
     @go()
   tp: ( x, y, minDistance, distance ) ->
-    p = @trigPool.pop() || new TrigPair()
-    p.init( x, y, minDistance, distance )
-    p
+    p = @geo.data()
+    @geo.calc( p, x, y, minDistance, distance )
   # calculate and store the geometric relationship between two things
   trig: ( t, o ) ->
     base = o.x - t.x
@@ -167,11 +239,11 @@ class Universe
     oi = o.id
     t1 = t.others[oi]
     t2 = o.others[ti]
-    @trigPool.push t1 if t1?
-    @trigPool.push t2 if t2? && !t2.tooFar
+    @geoPool.push t1 if t1
+    @geoPool.push t2 if t2
     tp = @tp(base, height, @minDistance)
     t.others[oi] = tp
-    o.others[ti] = tp.opposite(@)
+    o.others[ti] = @geo.opposite(tp)
   # finds the things within a particular distance of a reference thing and within a certain
   # wedge around the direction of the things movement
   # if the thing has a visual angle of 1, or the thing is motionless, all things within the distance are returned
@@ -183,22 +255,22 @@ class Universe
         id = t.id
         continue if t.id == tid || seen[id]
         data = thing.others[id]
-        continue if data.tooFar
-        if data.distance <= distance
+        continue unless data
+        if @geoData[data] <= distance
           seen[id] = true
           nearOnes.push t
     else
       [ t1, t2 ] = thing.margins()
       if angle <= .5
-        test = (tp) -> t1.le(tp) && t2.ge(tp)
+        test = (tp) => @geo.le( t1, tp ) && @geo.ge( t2, tp )
       else
-        test = (tp) -> !(t2.le(tp) && t1.ge(tp))
+        test = (tp) => !( @geo.le( t2, tp ) && @geo.ge( t1, tp) )
       others = thing.others
       for t in candidates
         id = t.id
         continue if id == tid || seen[id]
         tp = others[id]
-        continue if tp.tooFar
+        continue unless tp
         if test tp
           seen[id] = true
           nearOnes.push t
@@ -264,6 +336,7 @@ class Universe
   # the steps involved in one go of the universe's clock
   go: ->
     unless @dead
+      console.log @geoPool.length
       @tick += 1
       self = @
       self.move()
@@ -379,54 +452,6 @@ shuffle = (ar, dup=false) ->
     ar[j] = t
   ar
 
-# for easy angle comparison without converting sines and cosines to angles
-class TrigPair
-  init: ( x, y, minDistance, distance ) ->
-    if distance?
-      sine = @sine = x
-      cosine = @cosine = y
-      @distance = distance
-    else
-      unless @tooFar = Math.abs(x) > minDistance || Math.abs(y) > minDistance
-        distance = @distance = Math.sqrt( Math.pow(x, 2) + Math.pow(y, 2) )
-        unless @tooFar ||= distance > minDistance
-          sine = @sine = y / distance
-          cosine = @cosine = x / distance
-          @height = y / distance
-          @width = x / distance
-    unless @tooFar
-      @segment = if sine == 0
-        if cosine == 1 then 0 else 4
-      else if sine == 1
-        2
-      else if sine == -1
-        6
-      else if sine > 0
-        if cosine > 0 then 1 else 3
-      else
-        if cosine > 0 then 7 else 5
-  le: (other) ->
-    [ s1, s2 ] = [ @segment, other.segment ]
-    if s1 == s2
-      if s1 % 2 == 0
-        true
-      else
-        if s1 == 1 || s1 == 7 then @sine <= other.sine else @sine >= other.sine
-    else
-      s1 - s2 > 4 || s1 < s2
-  ge: (other) ->
-    other.le @
-  # produces a vector in the TrigPair direction with the given magnitude
-  vector: (magnitude) ->
-    [ @width * magnitude, @height * magnitude ]
-  # generates the counterpart of @ TrigPair after a 180 degree rotation
-  opposite: (u) ->
-    return @ if @tooFar
-    op = u.tp( -@sine, -@cosine, null, @distance )
-    op.width = -@width
-    op.height = -@height
-    op
-
 # something in the universe
 class Thing
   constructor: ( location, options = {} ) ->
@@ -476,6 +501,7 @@ class Thing
     @universe.near @, @radius, 1
   margins: ->
     m = @marges ||= []
+    return m if m.length
     fi = Math.PI * @visualAngle() / 2
     t1 = @angle - fi
     t1 = @universe.tp( Math.sin(t1), Math.cos(t1) )
@@ -484,6 +510,13 @@ class Thing
     m.push t1
     m.push t2
     m
+  clean: ->
+    for k, v in @others
+      @universe.geoPool.push v if v
+      delete @others[k]
+    if @marges
+      while @marges.length
+        @universe.geoPool.push @marges.pop()
 
 class Stone extends Thing
   constructor: ( location, options = {} ) ->
@@ -694,13 +727,15 @@ class Animal extends Organism
     super()
     x = 0
     y = 0
+    g = @universe.geo
+    gd = @universe.geoData
     for other in @nearby()
       influence = @affinity other
       if influence
         data = @others[other.id]
-        influence /= Math.pow( data.distance, 2 )
+        influence /= Math.pow( gd[data], 2 )
         influence *= @g()
-        [ xa, ya ] = data.vector influence
+        [ xa, ya ] = g.vector data, influence
         x += xa
         y += ya
     if x || y
