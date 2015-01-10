@@ -22,10 +22,24 @@
       <a href="#" onclick="stop();return false">stop</a>
       <a href="#" onclick="start();return false">start</a>
       <a href="#" onclick="restart();return false">restart</a>
+      <a href="#" onclick="toggleCharts(); return false" title="charts only work if you have an Internet connection">charts</a>
     </div>
     <div id="chart"></div>
     <script type="text/javascript">
-      var u;
+      var u, makeCharts, loaded;
+      function toggleCharts() {
+        try {
+          makeCharts = !makeCharts;
+          if (!loaded) {
+            google.load('visualization', '1', {packages: ['corechart']});
+            google.setOnLoadCallback(drawChart);
+          }
+          loaded = true;
+        } catch (e) {
+          makeCharts = false;
+          loaded = false;
+        }
+      }
       function makeUniverse() {
         u = new Universe("universe", { callback: collectData } );
       }
@@ -47,7 +61,8 @@
         }
         var row = [ evoData.generation, counts.Plant, counts.Herbivore, counts.Carnivore ];
         evoData.population.rows.push(row);
-        drawChart();
+        if (makeCharts)
+          drawChart();
       }
       function restart() {
         u.stop();
@@ -63,9 +78,6 @@
       function start() {
         u.start();
       }
-
-      google.load('visualization', '1', {packages: ['corechart']});
-      google.setOnLoadCallback(drawChart);
 
       function trimData(data) {
         if (data.length < 500) return data;
