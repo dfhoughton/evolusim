@@ -308,6 +308,7 @@ class Universe
   go: ->
     @timer ||= new Date()
     unless @dead
+      @goTime = new Date()
       @tick += 1
       self = @
       self.move()
@@ -329,9 +330,11 @@ class Universe
               ->
                 self.callback(self)
                 if self.running
+                  pause = self.pause - new Date().getTime() + self.goTime.getTime()
+                  pause = 0 if pause < 0;
                   setTimeout(
                     -> self.go()
-                    self.pause
+                    pause
                   )
               0
             )
