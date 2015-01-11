@@ -7,10 +7,10 @@ class Universe
     pause: 0
     minDistance: 60
     initialCreatures:
-      stones: num: 30
+      stones: num: 40
       plants: num: 60
       herbivores: num: 8
-      carnivores: num: 8
+      carnivores: num: 14
   # set the universe
   constructor: ( id, options = {} ) ->
     @canvas = document.getElementById id
@@ -143,12 +143,14 @@ class Universe
     setTimeout(
       =>
         t.clean() for t in @things
+        @reportDelta 'cleaning'
         for t in @things
           animal = t instanceof Animal
           for other in fresh
             @trig t, other if animal || other instanceof Animal
           fresh.push t
         @things = fresh
+        @reportDelta 'recalculation'
         @afterGeometry()
       0
     )
@@ -173,11 +175,6 @@ class Universe
       @geoPool.push v
     for k, v of thing.others when v
       @geoPool.push v
-    for i in [0...@things.length]
-      t = @things[i]
-      if t.id == thing.id
-        @things.splice i, 1
-        break
     for t in @things
       v = t.others[thing.id]
       if v?
@@ -333,29 +330,52 @@ class Universe
     now = new Date()
     obj[name] = now.getTime() - time.getTime()
     now
+  reportDelta: (name) ->
+    now = new Date()
+    delta = now.getTime() - @timer.getTime()
+    @timer = now
+    console.log name, delta
+  countTypes: ->
+    counts = {}
+    names = {}
+    for t in @things
+      n = names[t.type] ||= t.typeName()
+      counts[n] ||= 0
+      counts[n] += 1
+    all = ( "#{t}: #{c}" for t, c of counts ).sort().join ', '
+    console.log all
   # the steps involved in one go of the universe's clock
   go: ->
+    @timer ||= new Date()
     unless @dead
-      console.log @geoPool.length
       @tick += 1
+      console.log 'GENERATION', @tick
+      @countTypes()
       self = @
       self.move()
+      @reportDelta 'move'
       setTimeout(
-        -> self.recalculateGeometries()
+        ->
+          self.recalculateGeometries()
+          self.reportDelta 'geometries'
         0
       )
   afterGeometry: ->
     self = @
     self.die()
+    self.reportDelta 'die'
     setTimeout(
       ->
         self.babies()
+        self.reportDelta 'babies'
         setTimeout(
           ->
             self.draw()
+            self.reportDelta 'draw'
             setTimeout(
               ->
                 self.callback(self)
+                self.reportDelta 'callback'
                 if self.running
                   setTimeout(
                     -> self.go()
@@ -380,6 +400,7 @@ class Universe
           for other in t.touching()
             t.eat other if other instanceof Herbivore
       @remThing t if t instanceof Animal && t.hp <= 0
+    @things = grep @things, (t) -> !t.dead
     @dead = true
     for t in @things
       if t instanceof Organism
