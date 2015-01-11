@@ -151,6 +151,7 @@ class Universe
     nextThing()
   remThing: (thing) ->
     thing.dead = true
+    @change = true
     for v in ( thing.marges || [] )
       @geoPool.push v
     for k, v of thing.others when v
@@ -165,6 +166,7 @@ class Universe
   moveThing: (thing) ->
     [ vx, vy ] = thing.velocity 
     return unless vx || vy
+    @change = true
     thing.x += vx
     thing.y += vy
     if thing.x < 0
@@ -308,7 +310,8 @@ class Universe
   # the steps involved in one go of the universe's clock
   go: ->
     @timer ||= new Date()
-    unless @dead
+    unless @dead || !@change
+      @change = false
       @goTime = new Date()
       @tick += 1
       self = @
@@ -486,6 +489,7 @@ class Thing
     @setAttributes options
     @others = {}
     uni = @universe
+    uni.change = true
     [ @x, @y ] = location
     @velocity = [ 0, 0 ]
     @radius ||= 5
@@ -616,9 +620,11 @@ class Organism extends Thing
   # how much you get for free per round
   gain: -> 0
   react: ->
+    start = @hp
     @hp += @gain()
     @hp -= @need()
     @hp = Math.min @hp, @health()
+    @universe.change = true if start != @hp
   # number of times per baby that one can attempt to find it a cradle
   babyTries: -> @genes.babyTries[0]
   # number of health points to transfer to baby
