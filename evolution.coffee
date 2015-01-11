@@ -4,7 +4,7 @@ class Universe
   defaults: ->
     width: 500
     height: 500
-    pause: 0
+    pause: 10
     minDistance: 60
     initialCreatures:
       stones: num: 40
@@ -112,25 +112,6 @@ class Universe
     createCreatures Plant, 'plants'
     createCreatures Herbivore, 'herbivores'
     createCreatures Carnivore, 'carnivores'
-  # introspection mechanism
-  getType: (type) ->
-    return type unless typeof type == 'string'
-    switch type
-      when 'Thing' then Thing
-      when 'Stone' then Stone
-      when 'Organism' then Organism
-      when 'Plant' then Plant
-      when 'Animal' then Animal
-      when 'Herbivore' then Herbivore
-      when 'Carnivore' then Carnivore
-  getThings: (type) ->
-    type = @getType type
-    @things.filter (i) -> i instanceof type
-  # debugging method
-  pickThing: (type) ->
-    type = @getType type
-    rightThings = @getThings type
-    rightThings[ ~~( Math.random() * rightThings.length )]
   addThing: (thing) ->
     thing.id = @idBase += 1
     animal = thing instanceof Animal
@@ -143,14 +124,12 @@ class Universe
     setTimeout(
       =>
         t.clean() for t in @things
-        @reportDelta 'cleaning'
         for t in @things
           animal = t instanceof Animal
           for other in fresh
             @trig t, other if animal || other instanceof Animal
           fresh.push t
         @things = fresh
-        @reportDelta 'recalculation'
         @afterGeometry()
       0
     )
@@ -325,57 +304,30 @@ class Universe
       grep points, (p) -> 0 <= p[0] < w && 0 <= p[1] < h
     else
       points
-  # profiling utility
-  time: ( obj, name, time ) ->
-    now = new Date()
-    obj[name] = now.getTime() - time.getTime()
-    now
-  reportDelta: (name) ->
-    now = new Date()
-    delta = now.getTime() - @timer.getTime()
-    @timer = now
-    console.log name, delta
-  countTypes: ->
-    counts = {}
-    names = {}
-    for t in @things
-      n = names[t.type] ||= t.typeName()
-      counts[n] ||= 0
-      counts[n] += 1
-    all = ( "#{t}: #{c}" for t, c of counts ).sort().join ', '
-    console.log all
   # the steps involved in one go of the universe's clock
   go: ->
     @timer ||= new Date()
     unless @dead
       @tick += 1
-      console.log 'GENERATION', @tick
-      @countTypes()
       self = @
       self.move()
-      @reportDelta 'move'
       setTimeout(
         ->
           self.recalculateGeometries()
-          self.reportDelta 'geometries'
         0
       )
   afterGeometry: ->
     self = @
     self.die()
-    self.reportDelta 'die'
     setTimeout(
       ->
         self.babies()
-        self.reportDelta 'babies'
         setTimeout(
           ->
             self.draw()
-            self.reportDelta 'draw'
             setTimeout(
               ->
                 self.callback(self)
-                self.reportDelta 'callback'
                 if self.running
                   setTimeout(
                     -> self.go()
@@ -442,6 +394,46 @@ class Universe
       @ctx.clearRect 0, 0, c.width, c.height
   describe: ->
     map @things, (t) -> t.describe()
+
+  # debugging/development utility methods
+  # profiling utility
+  time: ( obj, name, time ) ->
+    now = new Date()
+    obj[name] = now.getTime() - time.getTime()
+    now
+  reportDelta: (name) ->
+    now = new Date()
+    delta = now.getTime() - @timer.getTime()
+    @timer = now
+    console.log name, delta
+  countTypes: ->
+    counts = {}
+    names = {}
+    for t in @things
+      n = names[t.type] ||= t.typeName()
+      counts[n] ||= 0
+      counts[n] += 1
+    all = ( "#{t}: #{c}" for t, c of counts ).sort().join ', '
+    console.log all
+  # introspection mechanism
+  getType: (type) ->
+    return type unless typeof type == 'string'
+    switch type
+      when 'Thing' then Thing
+      when 'Stone' then Stone
+      when 'Organism' then Organism
+      when 'Plant' then Plant
+      when 'Animal' then Animal
+      when 'Herbivore' then Herbivore
+      when 'Carnivore' then Carnivore
+  getThings: (type) ->
+    type = @getType type
+    @things.filter (i) -> i instanceof type
+  # debugging method
+  pickThing: (type) ->
+    type = @getType type
+    rightThings = @getThings type
+    rightThings[ ~~( Math.random() * rightThings.length )]
 
 window.Universe = Universe
 

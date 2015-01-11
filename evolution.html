@@ -4,9 +4,18 @@
     <script type="text/javascript" src="https://www.google.com/jsapi?autoload={'modules':[{'name':'visualization','version':'1','packages':['corechart']}]}"></script>
     <script type="text/javascript" src="evolution.js"></script>
     <style type="text/css">
-#universe, #controls, #chart {
+#universe-wrapper, #controls, #chart {
   display: table;
   margin: 1em auto;
+}
+#options, #univese {
+  margin: 0 1em;
+}
+#univese {
+  display: inline-table;
+}
+#options {
+  vertical-align: top;
 }
 #universe {
   border: 2px solid red;
@@ -14,22 +23,119 @@
 #controls a {
   margin: 0 1em;
 }
+.indenter {
+  margin-left: .5em;
+}
+.param-header, .param-value {
+  font-size: small;
+  font-weight: bold;
+}
+.param-value {
+  font-weight: normal;
+}
     </style>
   </head>
   <body>
-    <canvas id="universe" height="400" width="600"></canvas>
+    <div id="universe-wrapper">
+      <div id="options" style="display:none;">
+        <h4>Initialization Parameters</h4>
+      </div>
+      <canvas id="universe" height="400" width="600"></canvas>
+    </div>
     <div id="controls">
+      <a href="#" onclick="params(this);return false">show params</a>
       <a href="#" onclick="stop();return false">stop</a>
       <a href="#" onclick="start();return false">start</a>
       <a href="#" onclick="restart();return false">restart</a>
-      <a href="#" onclick="toggleCharts(); return false" title="charts only work if you have an Internet connection">charts</a>
+      <a href="#" onclick="toggleCharts(this); return false" title="charts only work if you have an Internet connection">charts on</a>
     </div>
     <div id="chart"></div>
     <script type="text/javascript">
-      var u, makeCharts, loaded;
-      function toggleCharts() {
+      var u, makeCharts, loaded, paramsDefined;
+      var initializationParameters = {
+        pause: [ 10, 0, 1000 ],
+        minDistance: [ 60, 30, 100 ],
+        initialCreatures: {
+          stones: { num: [ 40, 0, 100 ] },
+          plants: { num: [ 60, 10, 100 ] },
+          herbivores: { num: [ 8, 0, 100 ] },
+          carnivores: { num: [ 14, 0, 100 ] }
+        }
+      };
+      function convertParams(obj) {
+        if ( obj === null || obj === undefined ) obj = initializationParameters;
+        var copy = {}
+        for ( var k in obj ) {
+          var v = obj[k];
+          if ( v instanceof Array ) {
+            copy[k] = v[0];
+          } else {
+            copy[k] = convertParams(v);
+          }
+        }
+        return copy;
+      }
+      function makeSliders(obj, parent) {
+        if ( parent === null || parent === undefined ) parent = document.getElementById('options');
+        if ( obj === null || obj === undefined ) obj = initializationParameters;
+        for ( var k in obj ) {
+          var v = obj[k];
+          var div = document.createElement('div');
+          div.setAttribute( 'class', 'indenter' );
+          var h = document.createElement('div');
+          h.setAttribute( 'class', 'param-header' );
+          h.innerHTML = k;
+          div.appendChild(h);
+          parent.appendChild(div);
+          if ( v instanceof Array ) {
+            makeSlider( k, obj, div );
+          } else {
+            makeSliders(v, div);
+          }
+        }
+      }
+      function makeSlider(label, object, parent) {
+        var values = object[label];
+        var s = document.createElement('input');
+        s.type = 'range';
+        s.min = values[1];
+        s.max = values[2];
+        s.value = values[0];
+        s.step = 1;
+        var sp = document.createElement('span');
+        sp.setAttribute( 'class', 'param-value' );
+        sp.innerHTML = values[0];
+        parent.appendChild(s);
+        parent.appendChild(sp);
+        s.onchange = function() {
+          sp.innerHTML = s.value;
+          values[0] = s.value;
+        }
+      }
+      function params(element) {
+        if (!paramsDefined) {
+          makeSliders();
+          paramsDefined = true;
+        }
+        paramDiv = document.getElementById('options');
+        if (element.innerHTML == 'show params') {
+          element.innerHTML = 'hide params';
+          paramDiv.style.display = 'inline-table'
+        } else {
+          element.innerHTML = 'show params';
+          paramDiv.style.display = 'none'
+        }
+      }
+      function toggleCharts(element) {
         try {
           makeCharts = !makeCharts;
+          var text;
+          if (makeCharts) {
+            text = "charts off";
+          } else {
+            text = "charts on";
+          }
+          element.innerHTML = text;
           if (!loaded) {
             google.load('visualization', '1', {packages: ['corechart']});
             google.setOnLoadCallback(drawChart);
@@ -42,7 +148,9 @@
         }
       }
       function makeUniverse() {
-        u = new Universe("universe", { callback: collectData } );
+        var p = convertParams();
+        p.callback = collectData;
+        u = new Universe("universe", p );
       }
       makeUniverse();
       var evoData = {
