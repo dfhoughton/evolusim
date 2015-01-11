@@ -108,7 +108,7 @@
         parent.appendChild(sp);
         s.onchange = function() {
           sp.innerHTML = s.value;
-          values[0] = s.value;
+          values[0] = Number.parseInt(s.value);
         }
       }
       function params(element) {

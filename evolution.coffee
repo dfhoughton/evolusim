@@ -103,11 +103,12 @@ class Universe
     }
 
     createCreatures = ( Cons, type ) ->
-      crOpts = ic[type].opts || {}
+      crOpts = dup( ic[type] || {} )
       crOpts.universe = uni
       cons = -> new Cons uni.randomLocation(used), crOpts
-      lim = ic[type] && ic[type].num || dic[type].num
-      cons() for i in [1..lim]
+      lim = ic[type] && ic[type].num
+      lim = dic[type].num unless lim?
+      cons() for i in [1..lim] if lim
     createCreatures Stone, 'stones'
     createCreatures Plant, 'plants'
     createCreatures Herbivore, 'herbivores'
@@ -456,6 +457,16 @@ grep = ( ar, f ) ->
 
 map = ( ar, f ) ->
   f(x) for x in ar
+
+dup = (obj) ->
+  if ( obj instanceof Array )
+    map obj, (o) -> dup o
+  else if ( typeof obj == 'object' )
+    copy = {}
+    copy[k] = dup v for k, v of obj
+    copy
+  else
+    obj
 
 # randomization utility
 shuffle = (ar, dup=false) ->
