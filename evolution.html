@@ -44,7 +44,7 @@
     </div>
     <div id="controls">
       <a href="#" onclick="params(this);return false">show params</a>
-      <a href="#" onclick="stop();return false">stop</a>
+      <a href="#" onclick="stop(this);return false" id="stop">stop</a>
       <a href="#" onclick="start();return false">start</a>
       <a href="#" onclick="toggleCharts(this); return false" title="charts only work if you have an Internet connection">charts on</a>
     </div>
@@ -180,9 +180,17 @@
         }
         makeUniverse();
         u.run();
+        document.getElementById("stop").innerHTML = "stop";
       }
-      function stop() {
-        u.stop();
+      function stop(element) {
+        if (!u) return;
+        if (u.running) {
+          u.stop();
+          element.innerHTML = "resume";
+        } else {
+          u.run();
+          element.innerHTML = "stop";
+        }
       }
 
       function trimData(data) {
