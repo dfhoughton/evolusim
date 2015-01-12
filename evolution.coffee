@@ -5,7 +5,7 @@ class Universe
     width: 500
     height: 500
     pause: 10
-    minDistance: 60
+    maxDistance: 60
     initialCreatures:
       stones: num: 40
       plants: num: 60
@@ -28,7 +28,7 @@ class Universe
     @tick   = 0
     @pause = options.pause || 0 
     @recalculateGeometries = if options.responsive then @responsiveRecalculate else @fastRecalculate
-    @minDistance = options.minDistance || Math.round( Math.max( @width, @height ) / 3 )
+    @maxDistance = options.maxDistance || Math.round( Math.max( @width, @height ) / 3 )
     @callback = options.callback || ->
     dic = @defaults().initialCreatures
     ic = @options.initialCreatures || dic
@@ -48,14 +48,14 @@ class Universe
       # free memory -- useful for debugging
       free: (offset) =>
         @geoPool.push offset
-      calc: ( offset, x, y, minDistance, distance ) =>
+      calc: ( offset, x, y, maxDistance, distance ) =>
         if distance?
           sine = x
           cosine = y
         else
-          unless tooFar = Math.abs(x) > minDistance || Math.abs(y) > minDistance
+          unless tooFar = Math.abs(x) > maxDistance || Math.abs(y) > maxDistance
             distance = Math.sqrt( Math.pow(x, 2) + Math.pow(y, 2) )
-            unless tooFar ||= distance > minDistance
+            unless tooFar ||= distance > maxDistance
               sine = y / distance
               cosine = x / distance
         unless tooFar
@@ -207,9 +207,9 @@ class Universe
   run: ->
     @running = true
     @go()
-  tp: ( x, y, minDistance, distance ) ->
+  tp: ( x, y, maxDistance, distance ) ->
     p = @geo.data()
-    @geo.calc( p, x, y, minDistance, distance )
+    @geo.calc( p, x, y, maxDistance, distance )
   # calculate and store the geometric relationship between two things
   trig: ( t, o ) ->
     base = o.x - t.x
@@ -220,7 +220,7 @@ class Universe
     t2 = o.others[ti]
     @geoPool.push t1 if t1
     @geoPool.push t2 if t2
-    tp = @tp(base, height, @minDistance)
+    tp = @tp(base, height, @maxDistance)
     t.others[oi] = tp
     o.others[ti] = @geo.opposite(tp)
   # finds the things within a particular distance of a reference thing and within a certain
@@ -716,9 +716,9 @@ class Animal extends Organism
     @type = Animal
   defaultGenes: ->
     @mergeGenes super(), {
-      auditoryRange: [ Math.min( @universe.minDistance / 3, 20 ), 10, @universe.minDistance / 2 ]
+      auditoryRange: [ Math.min( @universe.maxDistance / 3, 20 ), 10, @universe.maxDistance / 2 ]
       visualAngle: [ .45, .1, 1 ]
-      visualRange: [ Math.min( @universe.minDistance / 2 , 30 ), 20, @universe.minDistance ]
+      visualRange: [ Math.min( @universe.maxDistance / 2 , 30 ), 20, @universe.maxDistance ]
       g: [ 250, 1, 5000 ]
       jitter: [ .05, 0.01, 1 ]
       kinAffinity: [
@@ -790,7 +790,7 @@ class Animal extends Organism
   # influencing entities nearby
   auditoryRange: -> @genes.auditoryRange[0]
   nearby: ->
-    candidates = @universe.near @, 1, @universe.minDistance
+    candidates = @universe.near @, 1, @universe.maxDistance
     seen = {}
     nearby = @universe.near @, 1, @auditoryRange(), seen, candidates
     nearby.concat @universe.near @, @angle, @visualRange(), seen, candidates

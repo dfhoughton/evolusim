@@ -4,7 +4,7 @@
     <script type="text/javascript" src="https://www.google.com/jsapi?autoload={'modules':[{'name':'visualization','version':'1','packages':['corechart']}]}"></script>
     <script type="text/javascript" src="evolution.js"></script>
     <style type="text/css">
-#universe-wrapper, #controls, #chart {
+#universe-wrapper, #controls, #chart, #tab-div {
   display: table;
   margin: 1em auto;
 }
@@ -33,6 +33,36 @@
 .param-value {
   font-weight: normal;
 }
+#tabs {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+#tabs > li {
+  display: block;
+  float: left;
+  border: solid;
+  padding: .1em .5em 0 .5em;
+  border-width: 1px;
+  border-top-color: black;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  cursor: pointer;
+  margin: 0;
+}
+#tabs > li.buffer {
+  min-width: 10em;
+  border-top-color: transparent;
+  border-left-color: transparent;
+  border-right-color: transparent;
+  cursor: auto;
+}
+#tabs > li.active {
+  border-bottom-color: transparent;
+}
+#charts-div {
+  display: none;
+}
     </style>
   </head>
   <body>
@@ -48,12 +78,62 @@
       <a href="#" onclick="start();return false">start</a>
       <a href="#" onclick="toggleCharts(this); return false" title="charts only work if you have an Internet connection">charts on</a>
     </div>
-    <div id="chart"></div>
+    <div id="charts-div">
+      <div id="tab-div">
+        <ul id="tabs">
+          <li class="buffer">&nbsp;</li>
+          <li class="active">all</li>
+          <li>plant</li>
+          <li>herbivore</li>
+          <li>carnivore</li>
+          <li class="buffer">&nbsp;</li>
+        </ul>
+      </div>
+      <div id="all-chart">
+        <div id="chart"></div>
+      </div>
+      <div id="plants-chart">
+      </div>
+      <div id="herbivores-chart">
+      </div>
+      <div id="carnivores-chart">
+      </div>
+    </div>
     <script type="text/javascript">
+      // wire up the chart tabs
+      (function(){
+      var tabs = [];
+      var div = document.getElementById('tab-div')
+      while ( div = div.nextSibling) {
+        if ( div.nodeType === 1 ) {
+          tabs.push(div);
+        }
+      }
+      var child = document.getElementById('tabs').firstChild
+      var sibs = [];
+      while ( child = child.nextSibling) {
+        if (child.nodeType === 1 && child.className !== 'buffer') {
+          sibs.push(child);
+          child.onclick = (function(c){
+            return function() {
+              if ( c.class === 'active' ) return;
+              for ( var i = 0; i < sibs.length; i += 1 ) {
+                sibs[i].removeAttribute('class');
+              }
+              c.setAttribute( 'class', 'active' );
+              for ( var i = 0; i < tabs.length; i += 1 ) {
+                tabs[i].style.display = 'none';
+              }
+              var id = c.innerHTML + '-chart'
+              document.getElementById(id).style.display = 'block';
+            };
+          })(child);
+        }
+      }})();
       var u, makeCharts, loaded, paramsDefined;
       var initializationParameters = {
-        pause: [ 10, 0, 1000 ],
-        minDistance: [ 60, 30, 100 ],
+        pause: [ 10, 0, 1000, 'minimum pause between "ticks"' ],
+        maxDistance: [ 60, 30, 100, 'maximum distance an organism can see' ],
         initialCreatures: {
           stones: { num: [ 40, 0, 100 ] },
           plants: { num: [ 60, 10, 100 ] },
@@ -97,9 +177,13 @@
         var values = object[label];
         var s = document.createElement('input');
         s.type = 'range';
+        s.value = values[0];
         s.min = values[1];
         s.max = values[2];
-        s.value = values[0];
+        var d;
+        if ( d = values[3] ) {
+          s.title = d;
+        }
         s.step = 1;
         var sp = document.createElement('span');
         sp.setAttribute( 'class', 'param-value' );
@@ -144,6 +228,9 @@
           alert( "Could not make charts: " + e );
           makeCharts = false;
           loaded = false;
+        }
+        if (loaded) {
+          document.getElementById('charts-div').style.display = 'block';
         }
       }
       function makeUniverse() {
