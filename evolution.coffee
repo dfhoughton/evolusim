@@ -548,6 +548,7 @@ class Thing
     if @marges
       while @marges.length
         @universe.geoPool.push @marges.pop()
+  healthRatio: -> 1
 
 class Stone extends Thing
   constructor: ( location, options = {} ) ->
@@ -696,6 +697,11 @@ class Organism extends Thing
             # clean the cradles for the next one
             @universe.removeCradles cradles, @universe.pointsNear( baby.x, baby.y, baby.radius * 2 )
             break
+  clean: ->
+    super()
+    @hr = null
+  healthRatio: ->
+    @hr ||= @hp / @health()
 
 class Plant extends Organism
   constructor: ( location, options = {} ) ->
@@ -830,12 +836,15 @@ class Animal extends Organism
   affinity: (other) ->
     switch other.type
       when @type then @kinAffinity()
+      when @foodType
+        @foodAffinity() * other.healthRatio() / @healthRatio()
       when Stone then -20
       else 0
 class Herbivore extends Animal
   constructor: ( location, options = {} ) ->
     super location, options
     @type = Herbivore
+    @foodType = Plant
   defaultGenes: ->
     @mergeGenes super(), {
       predatorAffinity: [
@@ -846,7 +855,6 @@ class Herbivore extends Animal
     }
   affinity: (other) ->
     switch other.type
-      when Plant then @foodAffinity()
       when Carnivore then @predatorAffinity()
       else super other
 class Carnivore extends Animal
@@ -855,6 +863,7 @@ class Carnivore extends Animal
     @bodyColor = options.bodyColor || 'red'
     @radius = options.radius || 6
     @type = Carnivore
+    @foodType = Herbivore
   defaultGenes: ->
     @mergeGenes super(), {
       g: [ 500, 1, 5000 ]
@@ -869,5 +878,4 @@ class Carnivore extends Animal
   affinity: (other) ->
     switch other.type
       when Plant then @plantAffinity()
-      when Herbivore then @foodAffinity()
       else super other
