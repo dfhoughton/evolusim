@@ -169,12 +169,11 @@ clearCharts = ->
         specs.rows = []
       e = byId id
       id.replace /\d+$/, ''
-      id = specs.id = "id#{resetNum}"
+      id = specs.id = "#{id}#{resetNum}"
       div = create 'div', 'chart'
       div.id = id
       e.parentNode.replaceChild div, e
 drawChart = ->
-  data = new google.visualization.DataTable()
   for title, specs of evoData.charts[chartType]
     id     = specs.id
     rows   = trimData specs.rows
@@ -184,6 +183,7 @@ drawChart = ->
     vtitle = specs.vtitle
     width  = specs.width || 1000
     height = specs.height || 400
+    data = new google.visualization.DataTable()
     data.addColumn 'number', 'X'
     data.addColumn 'number', n for n in names
     data.addRows rows
