@@ -15,6 +15,7 @@ create = (tag, cz) ->
   e = document.createElement(tag)
   e.setAttribute( 'class', cz ) if cz
   e
+chartType = 'all'
 ( ->
   tabs = []
   div = byId 'tab-div'
@@ -31,10 +32,12 @@ create = (tag, cz) ->
             s.removeAttribute 'class' for s in sibs
             c.setAttribute 'class', 'active'
             t.style.display = 'none' for t in tabs
-            byId( c.innerHTML + '-chart' ).style.display = 'block'
+            chartType = c.innerHTML
+            byId( chartType + '-chart' ).style.display = 'block'
+            showCharts(chartType)
         )(child)
 )()
-[ u, makeCharts, loaded, paramsDefined, chart ] = [ null, false, false, false, null ]
+[ u, makeCharts, loaded, paramsDefined ] = [ null, false, false, false ]
 convertParams = (obj=initializationParameters) ->
   copy = {}
   for k,v of obj
@@ -100,25 +103,34 @@ makeUniverse = ->
   p.callback = collectData
   u = new Universe 'universe', p
 evoData =
+  resetNum: 1
   generation: 0
-  population:
-    names: [ 'Plant', 'Herbivore', 'Carnivore' ]
-    rows: []
+  charts:
+    all:
+      Population:
+        id: 'chart'
+        htitle: 'Time (ticks)'
+        vtitle: 'Num. individuals'
+        collector: (stats, rows) ->
+          counts = Plant: 0, Herbivore: 0, Carnivore: 0
+          counts[description.type] += 1 for description in stats
+          row = [ evoData.generation, counts.Plant, counts.Herbivore, counts.Carnivore ]
+          rows.push row
+        names: [ 'Plant', 'Herbivore', 'Carnivore' ]
+        rows: []
 collectData = ->
   evoData.generation += 1
   stats = u.describe()
-  counts = Plant: 0, Herbivore: 0, Carnivore: 0
-  counts[description.type] += 1 for description in stats
-  row = [ evoData.generation, counts.Plant, counts.Herbivore, counts.Carnivore ]
-  evoData.population.rows.push row
+  for tab, specs of evoData.charts
+    for title, details of specs
+      details.collector stats, details.rows
   drawChart() if makeCharts
 window.start = ->
   if u
     u.stop()
     evoData.generation = 0
-    evoData.rows = []
+    clearCharts()
     u.erase()
-  clearChart()
   makeUniverse()
   u.run()
   byId('stop').innerHTML = 'stop'
@@ -135,27 +147,50 @@ trimData = (data) ->
   results = []
   results.push data[i] for i in [data.length - 500...data.length]
   results
-clearChart = ->
-  if chart
-    chart.clearChart()
-    chart = null
-    e = byId('chart')
-    while e.firstChild
-      e.removeChild e.firstChild
+clearCharts = ->
+  resetNum = evoData.resetNum++
+  for type, subtype of evoData.charts
+    for title, specs of subtype
+      id = specs.id
+      if chart = specs.chart
+        chart.clearChart()
+        specs.chart = null
+        specs.rows = []
+      e = byId id
+      id.replace /\d+$/, ''
+      id = specs.id = "id#{resetNum}"
+      div = create 'div', 'chart'
+      div.id = id
+      e.parentNode.replaceChild div, e
 drawChart = ->
   data = new google.visualization.DataTable()
-  data.addColumn 'number', 'X'
-  data.addColumn 'number', n for n in evoData.population.names
-  data.addRows trimData(evoData.population.rows)
-  options =
-    width: 1000
-    height: 500
-    hAxis:
-      title: 'Time (ticks)'
-    vAxis:
-      title: 'Population'
-  if chart
-    # chart.clearChart()
-  else
-    chart = new google.visualization.LineChart byId('chart')
-  chart.draw data, options
+  for title, specs of evoData.charts[chartType]
+    id     = specs.id
+    rows   = trimData specs.rows
+    names  = specs.names
+    chart  = specs.chart
+    htitle = specs.htitle
+    vtitle = specs.vtitle
+    width  = specs.width || 1000
+    height = specs.height || 400
+    data.addColumn 'number', 'X'
+    data.addColumn 'number', n for n in names
+    data.addRows rows
+    options =
+      title: title
+      width: width
+      height: height
+      hAxis:
+        title: htitle
+      vAxis:
+        title: vtitle
+      # chartArea:
+      #   left: 30
+      #   top: 30
+      #   width: '80%'
+      #   height: '80%'
+    if chart
+      chart.clearChart()
+    else
+      specs.chart = chart = new google.visualization.LineChart byId(id)
+    chart.draw data, options
