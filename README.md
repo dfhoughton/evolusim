@@ -32,4 +32,4 @@ Coffeescript is not the highest performance language for computation, and Evolus
 License
 -------
 
-See included license file.
+See included license file. The HTML demo also uses Google charts. Thanks, Google!

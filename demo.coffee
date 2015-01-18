@@ -118,6 +118,17 @@ evoData =
           rows.push row
         names: [ 'Plant', 'Herbivore', 'Carnivore' ]
         rows: []
+      Energy:
+        id: 'energy'
+        htitle: 'Time (ticks)'
+        vtitle: 'Net energy embodied by indviduals'
+        collector: (stats, rows) ->
+          counts = Plant: 0, Herbivore: 0, Carnivore: 0
+          counts[description.type] += description.hp for description in stats
+          row = [ evoData.generation, counts.Plant, counts.Herbivore, counts.Carnivore ]
+          rows.push row
+        names: [ 'Plant', 'Herbivore', 'Carnivore' ]
+        rows: []
 collectData = ->
   evoData.generation += 1
   stats = u.describe()
