@@ -184,11 +184,6 @@ drawChart = ->
         title: htitle
       vAxis:
         title: vtitle
-      # chartArea:
-      #   left: 30
-      #   top: 30
-      #   width: '80%'
-      #   height: '80%'
     if chart
       chart.clearChart()
     else
