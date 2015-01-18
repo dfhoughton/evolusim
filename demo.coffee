@@ -117,6 +117,7 @@ evoData =
           row = [ evoData.generation, counts.Plant, counts.Herbivore, counts.Carnivore ]
           rows.push row
         names: [ 'Plant', 'Herbivore', 'Carnivore' ]
+        colors: [ 'green', 'brown', 'red' ]
         rows: []
       Energy:
         id: 'energy'
@@ -128,6 +129,7 @@ evoData =
           row = [ evoData.generation, counts.Plant, counts.Herbivore, counts.Carnivore ]
           rows.push row
         names: [ 'Plant', 'Herbivore', 'Carnivore' ]
+        colors: [ 'green', 'brown', 'red' ]
         rows: []
 collectData = ->
   evoData.generation += 1
@@ -183,6 +185,7 @@ drawChart = ->
     vtitle = specs.vtitle
     width  = specs.width || 1000
     height = specs.height || 400
+    colors = specs.colors
     data = new google.visualization.DataTable()
     data.addColumn 'number', 'X'
     data.addColumn 'number', n for n in names
@@ -195,6 +198,7 @@ drawChart = ->
         title: htitle
       vAxis:
         title: vtitle
+    options.colors = colors if colors
     if chart
       chart.clearChart()
     else
