@@ -103,7 +103,7 @@ class Universe
     }
 
     createCreatures = ( Cons, type ) ->
-      crOpts = dup( ic[type] || {} )
+      crOpts = dup( ic[type] || {} )['init'] || {}
       crOpts.universe = uni
       cons = -> new Cons uni.randomLocation(used), crOpts
       lim = ic[type] && ic[type].num
@@ -690,6 +690,7 @@ class Organism extends Thing
                 genes:      genes
                 hp:         @babyCost()
                 radius:     @radius
+                bodyColor:  @bodyColor
                 generation: @generation + 1
               }
             )

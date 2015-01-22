@@ -6,10 +6,16 @@ initializationParameters =
       num: [ 40, 0, 100 ]
     plants:
       num: [ 100, 10, 500 ]
+      init:
+        bodyColor: '#00ff00'
     herbivores:
       num: [ 8, 0, 100 ]
+      init:
+        bodyColor: '#701614'
     carnivores:
       num: [ 40, 0, 100 ]
+      init:
+        bodyColor: '#ff0000'
 byId = (id) -> document.getElementById(id)
 create = (tag, cz) ->
   e = document.createElement(tag)
@@ -43,10 +49,12 @@ convertParams = (obj=initializationParameters) ->
   for k,v of obj
     if v instanceof Array
       copy[k] = v[0]
-    else
+    else if typeof v == 'object'
       copy[k] = convertParams v
+    else
+      copy[k] = v
   copy
-makeSliders = (obj=initializationParameters, parent=byId('options')) ->
+makeInputs = (obj=initializationParameters, parent=byId('options')) ->
   for k,v of obj
     div = create 'div', 'indenter'
     h = create 'div', 'param-header'
@@ -55,8 +63,21 @@ makeSliders = (obj=initializationParameters, parent=byId('options')) ->
     parent.appendChild div
     if v instanceof Array
       makeSlider k, obj, div
+    else if /color/i.test k
+      makeColorPicker k, obj, div
+    else if typeof v == 'boolean'
+      makeCheckbox k, obj, div
     else
-      makeSliders v, div
+      makeInputs v, div
+makeColorPicker = (label, object, parent) ->
+  color = object[label]
+  s = create 'input'
+  s.type = 'color'
+  s.value = color
+  parent.appendChild s
+  s.onchange = ->
+    object[label] = s.value
+makeCheckbox = (label, obj, parent) ->
 makeSlider = (label, object, parent) ->
   values = object[label]
   s = create 'input'
@@ -75,7 +96,7 @@ makeSlider = (label, object, parent) ->
     values[0] = Number.parseInt s.value
 window.params = (element) ->
   unless paramsDefined
-    makeSliders()
+    makeInputs()
     paramsDefined = true
   paramDiv = byId 'options'
   if element.innerHTML == 'show params'
