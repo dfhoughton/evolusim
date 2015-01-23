@@ -115,21 +115,20 @@ class Universe
     createCreatures Carnivore, 'carnivores'
   addThing: (thing) ->
     thing.id = @idBase += 1
-    animal = thing instanceof Animal
-    for t in @things
-      @trig thing, t if animal || t instanceof Animal
-    @things.push thing
+    @addToCollection thing, @things
+  addToCollection: (thing, collection) ->
+    if thing instanceof Animal
+      @trig thing, t for t in collection
+    else
+      @trig t, thing for t in collection when t instanceof Animal
+    collection.push thing
   # do all recalculations without yielding any time to browser events
   fastRecalculate: ->
     fresh = []
     setTimeout(
       =>
         t.clean() for t in @things
-        for t in @things
-          animal = t instanceof Animal
-          for other in fresh
-            @trig t, other if animal || other instanceof Animal
-          fresh.push t
+        @addToCollection thing, fresh for thing in @things
         @things = fresh
         @afterGeometry()
       0
@@ -140,10 +139,7 @@ class Universe
     nextThing = =>
       if @things.length
         t = @things.shift()
-        animal = t instanceof Animal
-        for other in fresh
-          @trig t, other if animal || other instanceof Animal
-        fresh.push t
+        @addToCollection t, fresh
         setTimeout nextThing, 0
       else
         @things = fresh
@@ -217,12 +213,13 @@ class Universe
     ti = t.id
     oi = o.id
     t1 = t.others[oi]
-    t2 = o.others[ti]
     @geoPool.push t1 if t1
-    @geoPool.push t2 if t2
     tp = @tp(base, height, @maxDistance)
     t.others[oi] = tp
-    o.others[ti] = @geo.opposite(tp)
+    if o instanceof Animal
+      t2 = o.others[ti]
+      @geoPool.push t2 if t2
+      o.others[ti] = @geo.opposite(tp)
   # finds the things within a particular distance of a reference thing and within a certain
   # wedge around the direction of the things movement
   # if the thing has a visual angle of 1, or the thing is motionless, all things within the distance are returned
@@ -487,13 +484,13 @@ class Thing
   constructor: ( location, options = {} ) ->
     throw "I need a universe!" unless options.universe
     @setAttributes options
-    @others = {}
     uni = @universe
     uni.change = true
     [ @x, @y ] = location
     @velocity = [ 0, 0 ]
     @radius ||= 5
     @type = Thing
+    @others = {}
     uni.addThing @
   typeName: ->
     s = "" + @type
