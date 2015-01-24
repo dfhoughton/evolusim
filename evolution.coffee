@@ -203,6 +203,16 @@ class Universe
   run: ->
     @running = true
     @go()
+  thingsCreated: -> @idBase
+  currentThings: -> @things.length
+  countThing: (type) ->
+    count = 0
+    count++ for t in @things when t instanceof type
+    count
+  plantCount: -> @countThing Plant
+  animalCount: -> @countThing Animal
+  herbivoreCount: -> @countThing Herbivore
+  carnivoreCount: -> @countThing Carnivore
   tp: ( x, y, maxDistance, distance ) ->
     p = @geo.data()
     @geo.calc( p, x, y, maxDistance, distance )
@@ -516,6 +526,7 @@ class Thing
     )
   drag: ->
   drawCircle: ( x, y, radius, color ) ->
+    return unless radius > 0
     ctx = @universe.ctx
     ctx.beginPath()
     ctx.arc x, y, radius, 0, Math.PI*2

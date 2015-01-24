@@ -8,20 +8,30 @@ initializationParameters =
       num: [ 100, 10, 500 ]
       init:
         bodyColor: '#00ff00'
+        radius: [ 4, 2, 20, 'plant size' ]
     herbivores:
       num: [ 8, 0, 100 ]
       init:
         bodyColor: '#701614'
+        radius: [ 5, 2, 20, 'body size' ]
     carnivores:
       num: [ 40, 0, 100 ]
       init:
         bodyColor: '#ff0000'
+        radius: [ 6, 2, 20, 'body size' ]
 byId = (id) -> document.getElementById(id)
 decamelize = (str) ->
   str = str.replace /([a-z])([A-Z])/g, "$1 $2"
   str.toLowerCase()
 text = (t) ->
   document.createTextNode(t)
+intFormat = (int) ->
+  ar = ( '' + int ).split('').reverse()
+  ar2 = []
+  for v, i in ar
+    ar2.push ',' if i && !( i % 3 )
+    ar2.push v
+  ar2.reverse().join ''
 create = (tag, cz) ->
   e = document.createElement(tag)
   e.setAttribute( 'class', cz ) if cz
@@ -161,6 +171,13 @@ evoData =
         rows: []
 collectData = ->
   evoData.generation += 1
+  byId('ticks').innerHTML = intFormat evoData.generation
+  byId('created').innerHTML = intFormat u.thingsCreated()
+  byId('current').innerHTML = intFormat u.currentThings()
+  byId('plant-count').innerHTML = intFormat u.plantCount()
+  byId('animal-count').innerHTML = intFormat u.animalCount()
+  byId('herbivore-count').innerHTML = intFormat u.herbivoreCount()
+  byId('carnivore-count').innerHTML = intFormat u.carnivoreCount()
   stats = u.describe()
   for tab, specs of evoData.charts
     for title, details of specs

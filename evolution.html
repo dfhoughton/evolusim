@@ -8,6 +8,14 @@
   display: table;
   margin: 1em auto;
 }
+#small-stats {
+  display: table;
+  margin: 0 auto;
+  font-size: smaller;
+}
+#small-stats label {
+  margin: 0 .35em;
+}
 #options, #univese {
   margin: 0 1em;
 }
@@ -71,6 +79,15 @@
         <h4>Initialization Parameters</h4>
       </div>
       <canvas id="universe" height="400" width="600"></canvas>
+    </div>
+    <div id="small-stats">
+      <label>Tick: <span id="ticks">0</span></label>
+      <label>Things created: <span id="created">0</span></label>
+      <label>Current things: <span id="current">0</span></label>
+      <label>Plants: <span id="plant-count">0</span></label>
+      <label>Animals: <span id="animal-count">0</span></label>
+      <label>Herbivores: <span id="herbivore-count">0</span></label>
+      <label>Carnivores: <span id="carnivore-count">0</span></label>
     </div>
     <div id="controls">
       <a href="#" onclick="params(this);return false">show params</a>
