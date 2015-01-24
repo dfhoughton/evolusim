@@ -17,6 +17,11 @@ initializationParameters =
       init:
         bodyColor: '#ff0000'
 byId = (id) -> document.getElementById(id)
+decamelize = (str) ->
+  str = str.replace /([a-z])([A-Z])/g, "$1 $2"
+  str.toLowerCase()
+text = (t) ->
+  document.createTextNode(t)
 create = (tag, cz) ->
   e = document.createElement(tag)
   e.setAttribute( 'class', cz ) if cz
@@ -58,7 +63,7 @@ makeInputs = (obj=initializationParameters, parent=byId('options')) ->
   for k,v of obj
     div = create 'div', 'indenter'
     h = create 'div', 'param-header'
-    h.innerHTML = k
+    h.innerHTML = decamelize k
     div.appendChild h
     parent.appendChild div
     if v instanceof Array
@@ -74,7 +79,9 @@ makeColorPicker = (label, object, parent) ->
   s = create 'input'
   s.type = 'color'
   s.value = color
-  parent.appendChild s
+  h = parent.firstChild
+  h.appendChild text(' ')
+  h.appendChild s
   s.onchange = ->
     object[label] = s.value
 makeCheckbox = (label, obj, parent) ->
@@ -108,8 +115,8 @@ window.params = (element) ->
 window.toggleCharts = (element) ->
   try
     makeCharts = !makeCharts
-    text = if makeCharts then 'charts off' else 'charts on'
-    element.innerHTML = text
+    txt = if makeCharts then 'charts off' else 'charts on'
+    element.innerHTML = txt
     unless loaded
       google.load 'visualization', '1', packages: ['corechart']
       google.setOnLoadCallback drawChart
