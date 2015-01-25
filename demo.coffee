@@ -36,29 +36,8 @@ create = (tag, cz) ->
   e = document.createElement(tag)
   e.setAttribute( 'class', cz ) if cz
   e
-chartType = 'all'
-( ->
-  tabs = []
-  div = byId 'tab-div'
-  while div = div.nextSibling
-    tabs.push div if div.nodeType == 1
-  child = byId('tabs').firstChild
-  sibs = []
-  while child = child.nextSibling
-    if child.nodeType == 1 && child.className != 'buffer'
-      sibs.push child
-      child.onclick = ( (c) ->
-          ->
-            return if c.className == 'active'
-            s.removeAttribute 'class' for s in sibs
-            c.setAttribute 'class', 'active'
-            t.style.display = 'none' for t in tabs
-            chartType = c.innerHTML
-            byId( chartType + '-chart' ).style.display = 'block'
-            showCharts(chartType)
-        )(child)
-)()
-[ u, makeCharts, loaded, paramsDefined ] = [ null, false, false, false ]
+chartType = 'options'
+[ u, makeCharts, loaded ] = [ null, false, false ]
 convertParams = (obj=initializationParameters) ->
   copy = {}
   for k,v of obj
@@ -111,31 +90,6 @@ makeSlider = (label, object, parent) ->
   s.onchange = ->
     sp.innerHTML = s.value
     values[0] = Number.parseInt s.value
-window.params = (element) ->
-  unless paramsDefined
-    makeInputs()
-    paramsDefined = true
-  paramDiv = byId 'options'
-  if element.innerHTML == 'show params'
-    element.innerHTML = 'hide params'
-    paramDiv.style.display = 'inline-table'
-  else
-    element.innerHTML = 'show params'
-    paramDiv.style.display = 'none'
-window.toggleCharts = (element) ->
-  try
-    makeCharts = !makeCharts
-    txt = if makeCharts then 'charts off' else 'charts on'
-    element.innerHTML = txt
-    unless loaded
-      google.load 'visualization', '1', packages: ['corechart']
-      google.setOnLoadCallback drawChart
-      loaded = true
-  catch e
-    alert "Could not make charts: #{e}"
-    makeCharts = false
-    loaded = false
-  byId('charts-div').style.display = 'block' if loaded
 makeUniverse = ->
   p = convertParams()
   p.callback = collectData
@@ -189,11 +143,15 @@ window.start = ->
     evoData.generation = 0
     clearCharts()
     u.erase()
+  else
+    byId('stop').style.display = 'inline'
+    byId('start').innerHTML = 'restart'
   makeUniverse()
   u.run()
   byId('stop').innerHTML = 'stop'
-window.stop = (element) ->
+window.stop = ->
   return unless u
+  element = byId 'stop'
   if u.running
     u.stop()
     element.innerHTML = 'resume'
@@ -221,7 +179,7 @@ clearCharts = ->
       div.id = id
       e.parentNode.replaceChild div, e
 drawChart = ->
-  for title, specs of evoData.charts[chartType]
+  for title, specs of evoData.charts[chartType] || {}
     id     = specs.id
     rows   = trimData specs.rows
     names  = specs.names
@@ -249,3 +207,47 @@ drawChart = ->
     else
       specs.chart = chart = new google.visualization.LineChart byId(id)
     chart.draw data, options
+tabs = []
+sibs = []
+restoreOptions = ( ->
+  t = byId 'tabs'
+  c = t.firstChild
+  while c = c.nextSibling
+    break if c.innerHTML == 'options'
+  -> tabClicked(c)
+  )()
+tabClicked = (c) ->
+  return if c.className == 'active'
+  s.removeAttribute 'class' for s in sibs
+  c.setAttribute 'class', 'active'
+  t.style.display = 'none' for t in tabs
+  chartType = c.innerHTML
+  if chartType == 'options'
+    makeCharts = false
+    byId('options').style.display = 'table'
+  else
+    byId( chartType + '-chart' ).style.display = 'block'
+    try
+      makeCharts = true
+      unless loaded
+        google.load 'visualization', '1', packages: ['corechart']
+        google.setOnLoadCallback drawChart
+        loaded = true
+    catch e
+      alert "Could not make charts: #{e}"
+      makeCharts = false
+      loaded = false
+      restoreOptions()
+( ->
+  makeInputs()
+  div = byId 'tab-div'
+  while div = div.nextSibling
+    tabs.push div if div.nodeType == 1
+  child = byId('tabs').firstChild
+  while child = child.nextSibling
+    if child.nodeType == 1 && child.className != 'buffer'
+      sibs.push child
+      child.onclick = ( (c) -> 
+        -> tabClicked c
+        )(child)
+)()
