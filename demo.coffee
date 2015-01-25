@@ -20,6 +20,7 @@ initializationParameters =
         bodyColor: '#ff0000'
         radius: [ 6, 2, 20, 'body size' ]
 byId = (id) -> document.getElementById(id)
+trimNum = (n) -> parseFloat n.toPrecision(3)
 decamelize = (str) ->
   str = str.replace /([a-z])([A-Z])/g, "$1 $2"
   str.toLowerCase()
@@ -162,11 +163,11 @@ geneChartSpec = ( type, gene, id ) ->
         mean += v for v in values
         mean /= values.length
         if values.length % 2
-          median = values[ Math.ceil(values.length/2) ]
+          median = values[ Math.floor(values.length/2) ]
         else
           i = values.length / 2
           median = ( values[i] + values[i - 1] ) / 2
-        rows.push [ evoData.generation, median, mean, min, max ]
+        rows.push [ evoData.generation, trimNum(median), trimNum(mean), trimNum(min), trimNum(max) ]
     rows: []
   }
 collectData = (u) ->
