@@ -102,10 +102,13 @@ class Universe
         @geo.calc( op, -@geoData[ offset + 1 ], -@geoData[ offset + 2 ], null, @geoData[offset] )
     }
 
+    paramsForType = ( type, dontAdd ) ->
+      params = dup( ic[type] || {} )['init'] || {}
+      params.universe = uni
+      params.dontAdd = dontAdd
+      params
     createCreatures = ( Cons, type ) ->
-      crOpts = dup( ic[type] || {} )['init'] || {}
-      crOpts.universe = uni
-      cons = -> new Cons uni.randomLocation(used), crOpts
+      cons = -> new Cons uni.randomLocation(used), paramsForType(type)
       lim = ic[type] && ic[type].num
       lim = dic[type].num unless lim?
       cons() for i in [1..lim] if lim
@@ -113,6 +116,15 @@ class Universe
     createCreatures Plant, 'plants'
     createCreatures Herbivore, 'herbivores'
     createCreatures Carnivore, 'carnivores'
+    # keep an inert instance of each type in its initial state
+    @seeds = {
+      'plant'     : new Plant [0,0], paramsForType( 'plants', true )
+      'herbivore' : new Herbivore [0,0], paramsForType( 'herbivores', true )
+      'carnivore' : new Carnivore [0,0], paramsForType( 'carnivores', true )
+    }
+
+  # fetch the initial version of a particular type of organism
+  urThing: (type) -> @seeds[type.toLowerCase()]
   addThing: (thing) ->
     thing.id = @idBase += 1
     @addToCollection thing, @things
@@ -501,7 +513,7 @@ class Thing
     @radius ||= 5
     @type = Thing
     @others = {}
-    uni.addThing @
+    uni.addThing @ unless @dontAdd
   typeName: ->
     s = "" + @type
     s = s.substr 0, s.indexOf '('
