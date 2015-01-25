@@ -609,8 +609,8 @@ class Organism extends Thing
         (t) -> t.radius * t.dispersalMin()
         (t) -> t.radius * t.dispersalMax()
       ]
-      mutationRate: [ .1, 0, 1 ]
-      mutationRange: [ .1, 0, 1 ]
+      mutationRate: [ .1, 0.01, 1 ]
+      mutationRange: [ .1, 0.01, 1 ]
     }
   # some things to control how far away from its mother a baby can be "born"
   dispersalStart: -> 5
