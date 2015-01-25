@@ -23,6 +23,8 @@ byId = (id) -> document.getElementById(id)
 decamelize = (str) ->
   str = str.replace /([a-z])([A-Z])/g, "$1 $2"
   str.toLowerCase()
+titlize = (str) ->
+  str.replace /\b[a-z]/g, (s) -> s.charAt(0).toUpperCase() + s.substr(1).toLowerCase()
 text = (t) ->
   document.createTextNode(t)
 intFormat = (int) ->
@@ -90,10 +92,21 @@ makeSlider = (label, object, parent) ->
   s.onchange = ->
     sp.innerHTML = s.value
     values[0] = Number.parseInt s.value
+madeGeneCharts = false
 makeUniverse = ->
   p = convertParams()
   p.callback = collectData
   u = new Universe 'universe', p
+  unless madeGeneCharts
+    for type in [ 'plant', 'herbivore', 'carnivore' ]
+      tab = byId "#{type}-chart"
+      for gene, v of u.urThing(type).genes
+        id = "#{type}-#{gene}"
+        div = create 'div', 'chart'
+        div.id = id
+        tab.appendChild div
+        charts = evoData.charts[type] ||= {}
+        charts[gene] = geneChartSpec type, gene, id
 evoData =
   resetNum: 1
   generation: 0
@@ -118,7 +131,7 @@ evoData =
       Energy:
         id: 'energy'
         htitle: 'Time (ticks)'
-        vtitle: 'Net energy embodied by indviduals'
+        vtitle: 'Net energy embodied by individuals'
         collector: (stats, rows) ->
           counts = Plant: 0, Herbivore: 0, Carnivore: 0
           counts[description.type] += description.hp for description in stats
@@ -131,6 +144,31 @@ evoData =
             -> u.urThing('carnivore').bodyColor
           ]
         rows: []
+geneChartSpec = ( type, gene, id ) ->
+  title = type.charAt(0).toUpperCase() + type.substr(1)
+  {
+    id: id
+    type: 'interval'
+    htitle: 'Time (ticks)'
+    vtitle: 'Value of gene'
+    collector: (stats, rows) ->
+      values = []
+      values.push d.genes[gene] for d in stats when d.type == title
+      [ min, max, mean, median ] = [ 0, 0, 0, 0 ]
+      if values.length
+        values.sort (a,b) -> a - b
+        min = values[0]
+        max = values[ values.length - 1 ]
+        mean += v for v in values
+        mean /= values.length
+        if values.length % 2
+          median = values[ Math.ceil(values.length/2) ]
+        else
+          i = values.length / 2
+          median = ( values[i] + values[i - 1] ) / 2
+        rows.push [ evoData.generation, median, mean, min, max ]
+    rows: []
+  }
 collectData = ->
   evoData.generation += 1
   byId('ticks').innerHTML = intFormat evoData.generation
@@ -188,30 +226,45 @@ clearCharts = ->
       e.parentNode.replaceChild div, e
 drawChart = ->
   for title, specs of evoData.charts[chartType] || {}
+    rows = trimData specs.rows
+    return unless rows.length && rows[0].length
     id     = specs.id
-    rows   = trimData specs.rows
-    names  = specs.names
     chart  = specs.chart
     htitle = specs.htitle
     vtitle = specs.vtitle
     width  = specs.width || 1000
     height = specs.height || 400
-    colors = specs.colors
-    for c, i in colors
-      colors[i] = c() if typeof c == 'function'
     data = new google.visualization.DataTable()
     data.addColumn 'number', 'X'
-    data.addColumn 'number', n for n in names
-    data.addRows rows
     options =
-      title: title
+      title: titlize decamelize(title)
       width: width
       height: height
       hAxis:
         title: htitle
       vAxis:
         title: vtitle
-    options.colors = colors if colors
+    if specs.type == 'interval'
+      data.addColumn 'number', 'values'
+      ids = []
+      for i in [2...5]
+        data.addColumn id: "i#{i}", type: 'number', role: 'interval'
+      options.interval =
+            i2: style: 'line', color:'green' # mean
+            i3: style: 'line', color:'black' # min
+            i4: style: 'line', color:'red' # max
+      options.lineWidth = 2
+      options.curveType = 'function'
+      options.legend    = 'none'
+    else
+      names  = specs.names
+      colors = specs.colors
+      if colors
+        for c, i in colors
+          colors[i] = c() if typeof c == 'function'
+        options.colors = colors
+      data.addColumn 'number', n for n in names
+    data.addRows rows
     if chart
       chart.clearChart()
     else
