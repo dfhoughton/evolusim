@@ -147,11 +147,14 @@ evoData =
         rows: []
 geneChartSpec = ( type, gene, id ) ->
   title = type.charAt(0).toUpperCase() + type.substr(1)
+  original = u.urThing(type).genes[gene][0]
+  original = original() if typeof original == 'function'
   {
-    id: id
-    type: 'interval'
-    htitle: 'Time (ticks)'
-    vtitle: 'Value of gene'
+    id:       id
+    type:     'interval'
+    htitle:   'Time (ticks)'
+    vtitle:   'Value of gene'
+    original: original
     collector: (stats, rows) ->
       values = []
       values.push d.genes[gene] for d in stats when d.type == title
@@ -231,7 +234,7 @@ clearCharts = ->
 drawChart = (ct=chartType)->
   return if ct == 'options'
   for title, specs of evoData.charts[ct] || {}
-    rows = trimData specs.rows
+    rows = specs.rows # trimData specs.rows
     return unless rows.length && rows[0].length
     id     = specs.id
     chart  = specs.chart
@@ -244,13 +247,20 @@ drawChart = (ct=chartType)->
     options =
       title: titlize decamelize(title)
       width: width
+      explorer: axis: 'horizontal'
       height: height
       hAxis:
         title: htitle
+        viewWindow:
+          min: Math.max 1, rows.length - 500
+          max: rows.length
       vAxis:
         title: vtitle
     if specs.type == 'interval'
       data.addColumn 'number', 'values'
+      if specs.original?
+        delta = rows[ rows.length - 1 ][1] - specs.original
+        options.title += " (delta: #{trimNum delta})"
       ids = []
       for i in [2...5]
         data.addColumn id: "i#{i}", type: 'number', role: 'interval'
