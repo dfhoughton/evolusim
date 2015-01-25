@@ -169,7 +169,7 @@ geneChartSpec = ( type, gene, id ) ->
         rows.push [ evoData.generation, median, mean, min, max ]
     rows: []
   }
-collectData = ->
+collectData = (u) ->
   evoData.generation += 1
   byId('ticks').innerHTML = intFormat evoData.generation
   byId('created').innerHTML = intFormat u.thingsCreated()
@@ -182,7 +182,10 @@ collectData = ->
   for tab, specs of evoData.charts
     for title, details of specs
       details.collector stats, details.rows
-  drawChart() if makeCharts
+  if u.done && loaded
+    drawChart e.innerHTML for e in sibs
+  else if makeCharts
+    drawChart()
 window.start = ->
   if u
     u.stop()
@@ -224,8 +227,9 @@ clearCharts = ->
       div = create 'div', 'chart'
       div.id = id
       e.parentNode.replaceChild div, e
-drawChart = ->
-  for title, specs of evoData.charts[chartType] || {}
+drawChart = (ct=chartType)->
+  return if ct == 'options'
+  for title, specs of evoData.charts[ct] || {}
     rows = trimData specs.rows
     return unless rows.length && rows[0].length
     id     = specs.id
@@ -254,7 +258,6 @@ drawChart = ->
             i3: style: 'line', color:'black' # min
             i4: style: 'line', color:'red' # max
       options.lineWidth = 2
-      options.curveType = 'function'
       options.legend    = 'none'
     else
       names  = specs.names

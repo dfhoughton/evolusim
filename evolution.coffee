@@ -328,31 +328,30 @@ class Universe
       points
   # the steps involved in one go of the universe's clock
   go: ->
-    @timer ||= new Date()
-    unless @dead || !@change
-      @change = false
-      @goTime = new Date()
-      @tick += 1
-      self = @
-      self.move()
-      setTimeout(
-        ->
-          self.recalculateGeometries()
-        0
-      )
+    @goTime  = new Date()
+    @timer ||= @goTime
+    @change  = false
+    @tick   += 1
+    @move()
+    setTimeout(
+      =>
+        @recalculateGeometries()
+      0
+    )
   afterGeometry: ->
     self = @
     self.die()
     setTimeout(
       ->
         self.babies()
+        self.done = !self.running || self.dead || !self.change
         setTimeout(
           ->
             self.draw()
             setTimeout(
               ->
                 self.callback(self)
-                if self.running
+                unless self.done
                   pause = self.pause - new Date().getTime() + self.goTime.getTime()
                   pause = 0 if pause < 0;
                   setTimeout(
