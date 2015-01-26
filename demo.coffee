@@ -211,10 +211,10 @@ window.stop = ->
   else
     u.run()
     element.innerHTML = 'stop'
-trimData = (data) ->
-  return data if data.length < 500
+trimData = (data, size) ->
+  return data if data.length < size
   results = []
-  results.push data[i] for i in [data.length - 500...data.length]
+  results.push data[i] for i in [data.length - size...data.length]
   results
 clearCharts = ->
   resetNum = evoData.resetNum++
@@ -234,7 +234,7 @@ clearCharts = ->
 drawChart = (ct=chartType)->
   return if ct == 'options'
   for title, specs of evoData.charts[ct] || {}
-    rows = specs.rows # trimData specs.rows
+    rows = trimData specs.rows, 2000
     return unless rows.length && rows[0].length
     id     = specs.id
     chart  = specs.chart
@@ -247,12 +247,14 @@ drawChart = (ct=chartType)->
     options =
       title: titlize decamelize(title)
       width: width
-      explorer: axis: 'horizontal'
+      explorer:
+        axis: 'horizontal'
+        keepInBounds: true
       height: height
       hAxis:
         title: htitle
         viewWindow:
-          min: Math.max 1, rows.length - 500
+          min: Math.max 1, rows.length - 400
           max: rows.length
       vAxis:
         title: vtitle
