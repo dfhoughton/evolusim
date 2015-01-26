@@ -604,22 +604,11 @@ class Organism extends Thing
       babyCost: [ 1, 1, (t) -> t.health() / 2 ]
       babyThreshold: [ .5, .1, .9 ]
       babyTries: [ 2, 1, (t) -> Math.min( 100, t.babyTries() * 2 ) ]
-      dispersalRadius: [
-        => @radius * @dispersalStart()
-        (t) -> t.radius * t.dispersalMin()
-        (t) -> t.radius * t.dispersalMax()
-      ]
       mutationRate: [ .1, 0.01, 1 ]
       mutationRange: [ .1, 0.01, 1 ]
     }
-  # some things to control how far away from its mother a baby can be "born"
-  dispersalStart: -> 5
-  dispersalMin: -> 3
-  dispersalMax: -> 20
-  dispersalRadius: ->
-    dr = @genes.dispersalRadius[0]
-    dr = @genes.dispersalRadius[0] = dr() if typeof dr == 'function'
-    dr
+  # how far away from its mother a baby can be "born"
+  dispersalRadius: -> 3 * @radius
   # utility function for extending default genes
   mergeGenes: ( base, ext ) ->
     genes = {}
@@ -730,7 +719,18 @@ class Plant extends Organism
     @radius = options.radius || 4
     @type = Plant
   gain: -> .5
-  dispersalStart: -> 15
+  defaultGenes: ->
+    @mergeGenes super(), {
+      dispersalRadius: [
+        => @radius * 15
+        (t) -> t.radius * 3
+        (t) -> t.radius * 20
+      ]
+    }
+  dispersalRadius: ->
+    dr = @genes.dispersalRadius[0]
+    dr = @genes.dispersalRadius[0] = dr() if typeof dr == 'function'
+    dr
 class Animal extends Organism
   constructor: ( location, options = {} ) ->
     super location, options
@@ -743,7 +743,7 @@ class Animal extends Organism
   defaultGenes: ->
     @mergeGenes super(), {
       auditoryRange: [ Math.min( @universe.maxDistance / 3, 20 ), 10, @universe.maxDistance / 2 ]
-      visualAngle: [ .45, .1, 1 ]
+      visualAngle: [ .45, .1, .8 ]
       visualRange: [ Math.min( @universe.maxDistance / 2 , 30 ), 20, @universe.maxDistance ]
       g: [ 250, 1, 5000 ]
       jitter: [ .05, 0.01, 1 ]
