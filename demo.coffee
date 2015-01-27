@@ -74,8 +74,14 @@ makeColorPicker = (label, object, parent) ->
   h = parent.firstChild
   h.appendChild text(' ')
   h.appendChild s
+  sp = create 'span'
+  sp.innerHTML = color
+  sp.style.fontWeight = 'normal'
+  h.appendChild text(' ')
+  h.appendChild sp
   s.onchange = ->
     object[label] = s.value
+    sp.innerHTML = s.value
 makeCheckbox = (label, obj, parent) ->
 makeSlider = (label, object, parent) ->
   values = object[label]
