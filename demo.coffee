@@ -7,17 +7,17 @@ initializationParameters =
     plants:
       num: [ 100, 10, 500 ]
       init:
-        bodyColor: '#00ff00'
+        bodyColor: '#ffcb0c'
         radius: [ 4, 2, 20, 'plant size' ]
     herbivores:
       num: [ 8, 0, 100 ]
       init:
-        bodyColor: '#701614'
+        bodyColor: '#2b4dcb'
         radius: [ 5, 2, 20, 'body size' ]
     carnivores:
       num: [ 40, 0, 100 ]
       init:
-        bodyColor: '#ff0000'
+        bodyColor: '#ec2200'
         radius: [ 6, 2, 20, 'body size' ]
 byId = (id) -> document.getElementById(id)
 trimNum = (n) -> parseFloat n.toPrecision(3)
