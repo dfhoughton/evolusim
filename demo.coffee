@@ -115,7 +115,6 @@ makeUniverse = ->
         charts = evoData.charts[type] ||= {}
         charts[gene] = geneChartSpec type, gene, id
 evoData =
-  resetNum: 1
   generation: 0
   charts:
     all:
@@ -223,20 +222,11 @@ trimData = (data, size) ->
   results.push data[i] for i in [data.length - size...data.length]
   results
 clearCharts = ->
-  resetNum = evoData.resetNum++
   for type, subtype of evoData.charts
     for title, specs of subtype
       id = specs.id
-      if chart = specs.chart
-        chart.clearChart()
-        specs.chart = null
-        specs.rows = []
-      e = byId id
-      id.replace /\d+$/, ''
-      id = specs.id = "#{id}#{resetNum}"
-      div = create 'div', 'chart'
-      div.id = id
-      e.parentNode.replaceChild div, e
+      chart.clearChart() if chart = specs.chart
+      specs.rows = []
 drawChart = (ct=chartType)->
   return if ct == 'options'
   for title, specs of evoData.charts[ct] || {}
