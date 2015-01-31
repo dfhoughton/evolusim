@@ -35,9 +35,10 @@ intFormat = (int) ->
     ar2.push ',' if i && !( i % 3 )
     ar2.push v
   ar2.reverse().join ''
-create = (tag, cz) ->
+create = (tag, cz, id) ->
   e = document.createElement(tag)
-  e.setAttribute( 'class', cz ) if cz
+  e.setAttribute( 'class', cz ) if cz?
+  e.id = id if id?
   e
 chartType = 'options'
 [ u, makeCharts, loaded ] = [ null, false, false ]
@@ -100,6 +101,10 @@ makeSlider = (label, object, parent) ->
     sp.innerHTML = s.value
     values[0] = Number.parseInt s.value
 madeGeneCharts = false
+chartDiv = ( tab, id ) ->
+  div = create 'div', 'chart', id
+  tab.appendChild div
+  id
 makeUniverse = ->
   p = convertParams()
   p.callback = collectData
@@ -107,12 +112,25 @@ makeUniverse = ->
   unless madeGeneCharts
     for type in [ 'plant', 'herbivore', 'carnivore' ]
       tab = byId "#{type}-chart"
+      charts = evoData.charts[type] = {}
+      id = chartDiv tab, "#{type}-babies"
+      charts.babies =
+        id:        id
+        type:      'interval'
+        htitle:    'Time (ticks)'
+        vtitle:    'Offspring per individual'
+        collector: statCollector titleize(type), (d) -> d.babies
+        rows:      []
+      id = chartDiv tab, "#{type}-age"
+      charts.age =
+        id:        id
+        type:      'interval'
+        htitle:    'Time (ticks)'
+        vtitle:    'Age (ticks)'
+        collector: statCollector titleize(type), (d) -> u.tick - d.tick
+        rows:      []
       for gene, v of u.urThing(type).genes
-        id = "#{type}-#{gene}"
-        div = create 'div', 'chart'
-        div.id = id
-        tab.appendChild div
-        charts = evoData.charts[type] ||= {}
+        id = chartDiv tab, "#{type}-#{gene}"
         charts[gene] = geneChartSpec type, gene, id
 evoData =
   generation: 0
