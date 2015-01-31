@@ -22,10 +22,9 @@ initializationParameters =
 byId = (id) -> document.getElementById(id)
 trimNum = (n) -> parseFloat n.toPrecision(3)
 decamelize = (str) ->
-  str = str.replace /([a-z])([A-Z])/g, "$1 $2"
-  str.toLowerCase()
-titlize = (str) ->
-  str.replace /\b[a-z]/g, (s) -> s.charAt(0).toUpperCase() + s.substr(1).toLowerCase()
+  str = str.replace /([a-z])([A-Z])/g, (t) -> t.charAt(0) + ' ' + t.charAt(1).toLowerCase()
+titleize = (str) ->
+  str.replace /\b[a-z]\w*/g, (s) -> s.charAt(0).toUpperCase() + s.substr(1).toLowerCase()
 text = (t) ->
   document.createTextNode(t)
 intFormat = (int) ->
@@ -150,33 +149,35 @@ evoData =
             -> u.urThing('carnivore').bodyColor
           ]
         rows: []
+statCollector = ( type, selector ) ->
+  ( stats, rows ) ->
+    values = []
+    values.push selector(d) for d in stats when d.type == type
+    [ min, max, mean, median ] = [ 0, 0, 0, 0 ]
+    if values.length
+      values.sort (a,b) -> a - b
+      min = values[0]
+      max = values[ values.length - 1 ]
+      mean += v for v in values
+      mean /= values.length
+      if values.length % 2
+        median = values[ Math.floor(values.length/2) ]
+      else
+        i = values.length / 2
+        median = ( values[i] + values[i - 1] ) / 2
+      rows.push [ evoData.generation, trimNum(median), trimNum(mean), trimNum(min), trimNum(max) ]
 geneChartSpec = ( type, gene, id ) ->
   title = type.charAt(0).toUpperCase() + type.substr(1)
   original = u.urThing(type).genes[gene][0]
   original = original() if typeof original == 'function'
   {
-    id:       id
-    type:     'interval'
-    htitle:   'Time (ticks)'
-    vtitle:   'Value of gene'
-    original: original
-    collector: (stats, rows) ->
-      values = []
-      values.push d.genes[gene] for d in stats when d.type == title
-      [ min, max, mean, median ] = [ 0, 0, 0, 0 ]
-      if values.length
-        values.sort (a,b) -> a - b
-        min = values[0]
-        max = values[ values.length - 1 ]
-        mean += v for v in values
-        mean /= values.length
-        if values.length % 2
-          median = values[ Math.floor(values.length/2) ]
-        else
-          i = values.length / 2
-          median = ( values[i] + values[i - 1] ) / 2
-        rows.push [ evoData.generation, trimNum(median), trimNum(mean), trimNum(min), trimNum(max) ]
-    rows: []
+    id:        id
+    type:      'interval'
+    htitle:    'Time (ticks)'
+    vtitle:    'Value of gene'
+    original:  original
+    collector: statCollector title, (d) -> d.genes[gene]
+    rows:      []
   }
 collectData = (u) ->
   evoData.generation += 1
@@ -241,7 +242,7 @@ drawChart = (ct=chartType)->
     data = new google.visualization.DataTable()
     data.addColumn 'number', 'X'
     options =
-      title: titlize decamelize(title)
+      title: titleize decamelize(title)
       width: width
       explorer:
         axis: 'horizontal'
@@ -258,7 +259,7 @@ drawChart = (ct=chartType)->
       data.addColumn 'number', 'values'
       if specs.original?
         delta = rows[ rows.length - 1 ][1] - specs.original
-        options.title += " (delta: #{trimNum delta})"
+        options.title = "Gene: #{options.title} (delta: #{trimNum delta})"
       ids = []
       for i in [2...5]
         data.addColumn id: "i#{i}", type: 'number', role: 'interval'
