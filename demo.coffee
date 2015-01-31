@@ -1,3 +1,4 @@
+# code to wire the evolution code to the demo page
 initializationParameters =
   pause: [ 10, 0, 1000, 'minimum pause between ticks' ]
   maxDistance: [ 60, 30, 100, 'maximum distance an organism can see' ]
