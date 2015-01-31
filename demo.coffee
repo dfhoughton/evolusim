@@ -302,17 +302,19 @@ tabClicked = (c) ->
     byId('options').style.display = 'table'
   else
     byId( chartType + '-chart' ).style.display = 'block'
-    try
-      makeCharts = true
-      unless loaded
-        google.load 'visualization', '1', packages: ['corechart']
-        google.setOnLoadCallback drawChart
-        loaded = true
-    catch e
-      alert "Could not make charts: #{e}"
-      makeCharts = false
-      loaded = false
-      restoreOptions()
+    tryLoad()
+tryLoad = (making=true) ->
+  try
+    makeCharts = making
+    unless loaded
+      google.load 'visualization', '1', packages: ['corechart']
+      google.setOnLoadCallback drawChart
+      loaded = true
+  catch e
+    alert "Could not make charts: #{e}" unless chartType == 'options'
+    makeCharts = false
+    loaded = false
+    restoreOptions()
 ( ->
   makeInputs()
   div = byId 'tab-div'
@@ -325,4 +327,5 @@ tabClicked = (c) ->
       child.onclick = ( (c) -> 
         -> tabClicked c
         )(child)
+  tryLoad(false)
 )()
