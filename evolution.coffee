@@ -280,8 +280,7 @@ class Universe
         continue if t.id == tid || seen[id]
         data = thing.others[id]
         continue unless data
-        d = @geoData[data] # FIXME
-        if d <= distance
+        if @geoData[data] <= distance
           seen[id] = true
           nearOnes.push t
     else
