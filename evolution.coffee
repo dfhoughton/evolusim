@@ -2,9 +2,10 @@
 class Universe
   # default initialization parameters
   defaults: ->
-    width: 500
+    width:  500
     height: 500
-    pause: 10
+    cell:   20
+    pause:  10
     maxDistance: 60
     initialCreatures:
       stones: num: 40
@@ -20,15 +21,31 @@ class Universe
     @width = @canvas.width
     @height = @canvas.height
     @maxDim = Math.max @width, @height
-    @things = []
+    @maxDistance = options.maxDistance || Math.round( Math.max( @width, @height ) / 3 )
+
+    # divide the universe into cells
+    @cellWidth = options.cell || @defaults().cell
+    @cells = []
+    cellBuffer = []
+    x = 0
+    while x <= @width
+      y = 0
+      @cells.push column = []
+      while y <= @height
+        c = new Cell @, x, y, @cellWidth
+        o.introduce c for o in cellBuffer
+        cellBuffer.push c
+        column.push c
+        y += @cellWidth
+      x += @cellWidth
+
+    @thingCount = 0
     @geoPool = [ 0 ]
     @geoData = [ null ]
     @dotCache = {}
     @idBase = 0
     @tick   = 0
-    @pause = options.pause || 0 
-    @recalculateGeometries = if options.responsive then @responsiveRecalculate else @fastRecalculate
-    @maxDistance = options.maxDistance || Math.round( Math.max( @width, @height ) / 3 )
+    @pause = options.pause || defaults().pause 
     @callback = options.callback || ->
     dic = @defaults().initialCreatures
     ic = @options.initialCreatures || dic
@@ -54,7 +71,7 @@ class Universe
           cosine = y
         else
           unless tooFar = Math.abs(x) > maxDistance || Math.abs(y) > maxDistance
-            distance = Math.sqrt( Math.pow(x, 2) + Math.pow(y, 2) )
+            distance = Math.sqrt( x * x + y * y )
             unless tooFar ||= distance > maxDistance
               sine = y / distance
               cosine = x / distance
@@ -117,58 +134,61 @@ class Universe
     createCreatures Herbivore, 'herbivores'
     createCreatures Carnivore, 'carnivores'
     # keep an inert instance of each type in its initial state
-    @seeds = {
-      'plant'     : new Plant [0,0], paramsForType( 'plants', true )
-      'herbivore' : new Herbivore [0,0], paramsForType( 'herbivores', true )
-      'carnivore' : new Carnivore [0,0], paramsForType( 'carnivores', true )
-    }
-
+    @seeds =
+      plant:     new Plant [0,0], paramsForType( 'plants', true )
+      herbivore: new Herbivore [0,0], paramsForType( 'herbivores', true )
+      carnivore: new Carnivore [0,0], paramsForType( 'carnivores', true )
+  # iterate over all things in the universe
+  visitThings: ( f, returns, safe ) ->
+    ret = [] if returns
+    for column in @cells
+      for cell in column
+        if cell.inhabitants.length
+          ar = if safe then cell.inhabitants else [].concat cell.inhabitants
+          for t in ar
+            v = f(t)
+            ret.push v if returns
+    ret
+  # place a thing in the appropriate cell
+  place: (thing, onlyMovingIn) ->
+    column = Math.floor( thing.x / @cellWidth )
+    row = Math.floor( thing.y / @cellWidth )
+    cell = @cells[column][row]
+    if onlyMovingIn
+      cell.moved.push thing
+    else
+      thing.cell = cell
+      cell.inhabitants.push thing
   # fetch the initial version of a particular type of organism
   urThing: (type) -> @seeds[type.toLowerCase()]
   addThing: (thing) ->
     thing.id = @idBase += 1
-    @addToCollection thing, @things
+    @thingCount++
+    # @addToCollection thing, @things
+    @place thing
   addToCollection: (thing, collection) ->
     if thing instanceof Animal
       @trig thing, t for t in collection
     else
       @trig t, thing for t in collection when t instanceof Animal
     collection.push thing
-  # do all recalculations without yielding any time to browser events
-  fastRecalculate: ->
-    fresh = []
-    setTimeout(
-      =>
-        t.clean() for t in @things
-        @addToCollection thing, fresh for thing in @things
-        @things = fresh
-        @afterGeometry()
-      0
-    )
-  # yield frequently to the browser while recalculating events
-  responsiveRecalculate: ->
-    fresh = []
-    nextThing = =>
-      if @things.length
-        t = @things.shift()
-        @addToCollection t, fresh
-        setTimeout nextThing, 0
-      else
-        @things = fresh
-        @afterGeometry()
-    nextThing()
   remThing: (thing) ->
     thing.dead = true
     @change = true
+    thing.cell.rem thing
+    @thingCount--
     for v in ( thing.marges || [] )
       @geoPool.push v
     for k, v of thing.others when v
       @geoPool.push v
-    for t in @things
-      v = t.others[thing.id]
-      if v?
-        @geoPool.push v if v
-        delete t.others[thing.id]
+    @visitThings(
+      (t) =>
+        v = t.others[thing.id]
+        if v?
+          @geoPool.push v if v
+          delete t.others[thing.id]
+      false, true
+    )
   # moves a thing based on that things velocity, handling reflection off
   # the edges of the universe
   moveThing: (thing) ->
@@ -193,6 +213,7 @@ class Universe
       thing.y -= thing.y - @height
       vy = thing.velocity[1] *= -1
       thing.changed = true
+    thing.cell.move thing
     return unless thing.angle?
     theta = anglify vx, vy
     thing.angle = theta + thing.jitter()
@@ -216,10 +237,13 @@ class Universe
     @running = true
     @go()
   thingsCreated: -> @idBase
-  currentThings: -> @things.length
+  currentThings: -> @thingCount
   countThing: (type) ->
     count = 0
-    count++ for t in @things when t instanceof type
+    @visitThings(
+      (t) -> count++ if t instanceof type
+      false, true
+    )
     count
   plantCount: -> @countThing Plant
   animalCount: -> @countThing Animal
@@ -229,6 +253,7 @@ class Universe
     p = @geo.data()
     @geo.calc( p, x, y, maxDistance, distance )
   # calculate and store the geometric relationship between two things
+  # returns the offset necessary to fetch this information
   trig: ( t, o ) ->
     base = o.x - t.x
     height = o.y - t.y
@@ -242,10 +267,11 @@ class Universe
       t2 = o.others[ti]
       @geoPool.push t2 if t2
       o.others[ti] = @geo.opposite(tp)
+    tp
   # finds the things within a particular distance of a reference thing and within a certain
   # wedge around the direction of the things movement
   # if the thing has a visual angle of 1, or the thing is motionless, all things within the distance are returned
-  near: (thing, distance, angle, seen={}, candidates=@things) ->
+  near: (thing, distance, angle, seen={}, candidates) ->
     nearOnes = []
     tid = thing.id
     if angle == 1
@@ -254,7 +280,8 @@ class Universe
         continue if t.id == tid || seen[id]
         data = thing.others[id]
         continue unless data
-        if @geoData[data] <= distance
+        d = @geoData[data] # FIXME
+        if d <= distance
           seen[id] = true
           nearOnes.push t
     else
@@ -279,7 +306,8 @@ class Universe
     candidatePoint = [ 0, -radius ]
     test = (pt) ->
       [ x, y ] = pt
-      Math.sqrt( Math.pow( x, 2 ) + Math.pow( radius + y, 2 ) ) <= radius
+      r = radius + y
+      Math.sqrt( x * x + r * r ) <= radius
     boundary.push [].concat(candidatePoint) if test(candidatePoint)
     while ((candidatePoint[1] += 1) <= 0)
       while true
@@ -332,43 +360,46 @@ class Universe
     @timer ||= @goTime
     @change  = false
     @tick   += 1
-    @move()
-    setTimeout(
-      =>
-        @recalculateGeometries()
-      0
+    @visitThings(
+      (t) -> t.clean()
+      false, true
     )
-  afterGeometry: ->
+    @move()
     self = @
-    self.die()
     setTimeout(
       ->
-        self.babies()
-        self.done = !self.running || self.dead || !self.change
+        self.die()
         setTimeout(
           ->
-            self.draw()
+            self.babies()
+            self.done = !self.running || self.dead || !self.change
             setTimeout(
               ->
-                self.callback(self)
-                unless self.done
-                  pause = self.pause - new Date().getTime() + self.goTime.getTime()
-                  pause = 0 if pause < 0;
-                  setTimeout(
-                    -> self.go()
-                    pause
-                  )
+                self.draw()
+                setTimeout(
+                  ->
+                    self.callback(self)
+                    unless self.done
+                      pause = self.pause - new Date().getTime() + self.goTime.getTime()
+                      pause = 0 if pause < 0;
+                      setTimeout(
+                        -> self.go()
+                        pause
+                      )
+                  0
+                )
               0
             )
           0
         )
       0
     )
-  # anything that is starving or eaten perishes
+  # give every organism an opportunity to eat or starve
+  # returns whether any organisms remain alive
   die: ->
-    for t in shuffle @things, true
-      continue if t.dead
-      continue unless t.type
+    @visitThings (t) =>
+      return if t.dead
+      return unless t.type
       switch t.type
         when Herbivore
           for other in t.touching()
@@ -377,19 +408,34 @@ class Universe
           for other in t.touching()
             t.eat other if other instanceof Herbivore
       @remThing t if t instanceof Animal && t.hp <= 0
-    @things = grep @things, (t) -> !t.dead
+    # @things = grep @things, (t) -> !t.dead
     @dead = true
-    for t in @things
-      if t instanceof Organism
-        @dead = false
-        break
+    for column in @cells
+      break unless @dead
+      for cell in column
+        break unless @dead
+        for t in cell.inhabitants
+          if t instanceof Organism
+            @dead = false
+            break
+    @dead
   # paint a moment in time
   draw: ->
     @erase()
-    t.draw() for t in @things
+    @visitThings(
+      (t) -> t.draw()
+      false, true
+    )
   # make all the current things react appropriately to the last moment in time
   move: ->
-    t.react() for t in @things
+    @visitThings (t) -> t.react()
+    for column in @cells
+      for cell in column
+        while cell.moved.length
+          v = cell.moved.pop()
+          v.cell = cell
+          cell.inhabitants.push v
+    true
   # all surviving things that are able to reproduce
   makeCradles: ->
     column = map [0...@height], -> true
@@ -397,13 +443,17 @@ class Universe
   babies: ->
     cradles = @makeCradles()
     orchards = @makeCradles()
-    for t in @things
-      points = @pointsNear t.x, t.y, t.radius * 2
-      @removeCradles cradles, points unless t instanceof Plant
-      @removeCradles orchards, points unless t instanceof Stone
-    for t in @things when t instanceof Organism
-      c = if t instanceof Plant then orchards else cradles
-      t.reproduce c
+    @visitThings(
+      (t) =>
+        points = @pointsNear t.x, t.y, t.radius * 2
+        @removeCradles cradles, points unless t instanceof Plant
+        @removeCradles orchards, points unless t instanceof Stone
+      false, true
+    )
+    @visitThings (t) ->
+      if t instanceof Organism
+        c = if t instanceof Plant then orchards else cradles
+        t.reproduce c
   findCradles: (allCradles, newCradles) ->
     grep newCradles, (pt) -> allCradles[pt[0]][pt[1]]
   removeCradles: (allCradles, points) ->
@@ -418,9 +468,13 @@ class Universe
       c = @canvas
       @ctx.clearRect 0, 0, c.width, c.height
   describe: ->
-    map @things, (t) -> t.describe()
+    @visitThings(
+      (t) -> t.describe()
+      true, true
+    )
 
   # debugging/development utility methods
+
   # profiling utility
   time: ( obj, name, time ) ->
     now = new Date()
@@ -434,10 +488,13 @@ class Universe
   countTypes: ->
     counts = {}
     names = {}
-    for t in @things
-      n = names[t.type] ||= t.typeName()
-      counts[n] ||= 0
-      counts[n] += 1
+    @visitThings(
+      (t) ->
+        n = names[t.type] ||= t.typeName()
+        counts[n] ||= 0
+        counts[n] += 1
+      false, true
+    )
     all = ( "#{t}: #{c}" for t, c of counts ).sort().join ', '
     console.log all
   # introspection mechanism
@@ -453,7 +510,11 @@ class Universe
       when 'Carnivore' then Carnivore
   getThings: (type) ->
     type = @getType type
-    @things.filter (i) -> i instanceof type
+    ret = []
+    @visitThings(
+      (t) -> ret.push t if t instanceof type
+      false, true
+    )
   # debugging method
   pickThing: (type) ->
     type = @getType type
@@ -499,6 +560,72 @@ shuffle = (ar, dup=false) ->
     ar[i] = ar[j]
     ar[j] = t
   ar
+
+# a division of the universe that knows its neighborhood
+class Cell
+  constructor: ( universe, x, y, width ) ->
+    @universe    = universe
+    @x           = x
+    @y           = y
+    @farX        = x + width
+    @farY        = y + width
+    @width       = width
+    @neighbors   = []
+    @inhabitants = []
+    @moved       = []
+  # whether this cell is the appropriate container for the thing
+  has: (thing) ->
+    @x <= thing.x < @farX && @y <= thing.y < @farY
+  # shift the thing to another cell as appropriate
+  move: (thing) ->
+    unless @has thing
+      @rem thing
+      @universe.place thing, true
+  # remove the thing from this cell's purview
+  rem: (thing) ->
+    for t, i in @inhabitants
+      if t == thing
+        @inhabitants.splice i, 1
+        break
+  # the minimum distance between a point in one cell and a point in the other
+  distance: (other) ->
+    if @x < other.x
+      x1 = @farX
+      x2 = other.x
+    else if @x > other.x
+      x1 = @x
+      x2 = other.farX
+    else
+      x1 = x2 = 0
+    if @y < other.y
+      y1 = @farY
+      y2 = other.y
+    else if @y > other.y
+      y1 = @y
+      y2 = other.farY
+    else
+      y1 = y2 = 0
+    x = x1 - x2
+    y = y1 - y2
+    Math.sqrt( x * x + y * y )
+  # introduce potentially neighboring cells to each other
+  introduce: ( other, maxDistance=@universe.maxDistance ) ->
+    d = @distance other
+    if d <= maxDistance
+      @neighbors.push [ other, d ]
+      other.neighbors.push [ @, d ]
+  # collect a candidate set of things potentially within the given radius of the thing
+  # thing should be an inhabitant of this cell
+  near: ( thing, distance=@universe.maxDistance ) ->
+    ret = []
+    for t in @inhabitants when t != thing
+      ret.push t
+      thing.others[t.id] ||= @universe.trig thing, t
+    for n in @neighbors when n[1] <= distance
+      for t in n[0].inhabitants
+        ret.push t
+        thing.others[t.id] ||= @universe.trig thing, t
+    ret
 
 # something in the universe
 class Thing
@@ -548,7 +675,30 @@ class Thing
       do => @[key] = value
   # all the things whose center is within the radius of @ thing
   touching: ->
-    @universe.near @, @radius, 1
+    candidates = @cell.near @, @radius
+    @summary candidates
+    touching = @universe.near @, @radius, 1, {}, candidates
+    @summary touching
+    console.log ''
+    touching
+  summary: (others) ->
+    sum =
+      type: @typeName()
+      others: others.length
+      x: @x
+      y: @y
+      cell:
+        x: @cell.x
+        y: @cell.y
+    for t in @cell.inhabitants
+      tn = t.typeName()
+      sum.cell[tn] ||= 0
+      sum.cell[tn]++
+    for t in others
+      tn = t.typeName()
+      sum[tn] ||= 0
+      sum[tn]++
+    console.log sum
   margins: ->
     m = @marges ||= []
     return m if m.length
@@ -561,7 +711,7 @@ class Thing
     m.push t2
     m
   clean: ->
-    for k, v in @others
+    for k, v of @others
       @universe.geoPool.push v if v
       delete @others[k]
     if @marges
@@ -792,13 +942,14 @@ class Animal extends Organism
       influence = @affinity other
       if influence
         data = @others[other.id]
-        influence /= Math.pow( gd[data], 2 )
+        d = gd[data]
+        influence /= d * d
         influence *= @g()
         [ xa, ya ] = g.vector data, influence
         x += xa
         y += ya
     if x || y
-      m = Math.sqrt( x*x + y*y )
+      m = Math.sqrt( x * x + y * y )
       if m > @maxAcceleration()
         f = @maxAcceleration() / m
         x *= f
@@ -806,7 +957,7 @@ class Animal extends Organism
       [ vx, vy ] = @velocity
       vx += x
       vy += y
-      m = Math.sqrt( Math.pow( vx, 2 ) + Math.pow( vy, 2 ) )
+      m = Math.sqrt( vx * vx + vy * vy )
       if m > @maxSpeed()
         f = @maxSpeed() / m
         vx *= f
@@ -816,7 +967,7 @@ class Animal extends Organism
   # influencing entities nearby
   auditoryRange: -> @genes.auditoryRange[0]
   nearby: ->
-    candidates = @universe.near @, 1, @universe.maxDistance
+    candidates = @cell.near @, Math.max( @visualRange(), @auditoryRange() )
     seen = {}
     nearby = @universe.near @, 1, @auditoryRange(), seen, candidates
     nearby.concat @universe.near @, @angle, @visualRange(), seen, candidates
