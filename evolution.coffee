@@ -676,29 +676,7 @@ class Thing
   # all the things whose center is within the radius of @ thing
   touching: ->
     candidates = @cell.near @, @radius
-    @summary candidates
-    touching = @universe.near @, @radius, 1, {}, candidates
-    @summary touching
-    console.log ''
-    touching
-  summary: (others) ->
-    sum =
-      type: @typeName()
-      others: others.length
-      x: @x
-      y: @y
-      cell:
-        x: @cell.x
-        y: @cell.y
-    for t in @cell.inhabitants
-      tn = t.typeName()
-      sum.cell[tn] ||= 0
-      sum.cell[tn]++
-    for t in others
-      tn = t.typeName()
-      sum[tn] ||= 0
-      sum[tn]++
-    console.log sum
+    @universe.near @, @radius, 1, {}, candidates
   margins: ->
     m = @marges ||= []
     return m if m.length
