@@ -885,7 +885,7 @@ class Animal extends Organism
         (t) -> Math.max( .1, Math.abs(t.foodAffinity()) * 2 )
       ],
       maxAcceleration : [
-        => @radius
+        => @radius / 2
         (t) -> t.radius / 4
         (t) -> t.maxSpeed() * 2
       ]
@@ -908,7 +908,7 @@ class Animal extends Organism
       @genes.maxAcceleration[0] = @genes.maxAcceleration[0]()
     else
       @genes.maxAcceleration[0]
-  maxSpeed: -> @maxSp ||= @maxAcceleration() * 1.5
+  maxSpeed: -> @maxSp ||= @radius * 1.5
   react: ->
     super()
     x = 0
