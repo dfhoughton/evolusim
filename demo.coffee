@@ -271,7 +271,6 @@ drawChart = (ct=chartType)->
         title: htitle
         viewWindow:
           min: Math.max 1, rows.length - 400
-          max: rows.length
       vAxis:
         title: vtitle
     if specs.type == 'interval'
