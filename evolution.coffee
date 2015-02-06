@@ -421,10 +421,11 @@ class Universe
   # paint a moment in time
   draw: ->
     @erase()
-    @visitThings(
-      (t) -> t.draw()
-      false, true
-    )
+    for type in [ Stone, Plant, Herbivore, Carnivore]
+      @visitThings(
+        (t) -> t.draw() if t instanceof type
+        false, true
+      )
   # make all the current things react appropriately to the last moment in time
   move: ->
     @visitThings (t) -> t.react()
