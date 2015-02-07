@@ -1,5 +1,6 @@
 # constants
 qt  = Math.PI / 2
+et  = qt / 2
 tau = Math.PI * 2
 
 # general handle on everything; keeps track of geometry of entities it contains
@@ -667,11 +668,12 @@ class Thing
       @bodyColor || 'black'
     )
   drag: ->
-  drawCircle: ( x, y, radius, color ) ->
+  drawCircle: ( x, y, radius, color ) -> @drawArc x, y, radius, color, 0, tau
+  drawArc: ( x, y, radius, color, start, end ) ->
     return unless radius > 0
     ctx = @universe.ctx
     ctx.beginPath()
-    ctx.arc x, y, radius, 0, tau
+    ctx.arc x, y, radius, start, end
     ctx.fillStyle = color
     ctx.fill()
   setAttributes: ( options = {} ) ->
@@ -963,10 +965,23 @@ class Animal extends Organism
   # some decorations that let us see the animal's angle of vision
   # the direction of its gaze, and where it's headed
   drawHead: ->
+    @earSize ?= @calcEarSize()
+    @drawEar()
+    @drawEar true
     inc = @visualAngle() * qt
     @eyeSize ?= @calcEyeSize()
     @drawEye inc
     @drawEye -inc
+  drawEar: (left) ->
+    point = @angle + if left then -qt else qt
+    rad = @earSize
+    [ start, end ] = if left then [ @angle, @angle + Math.PI ] else [ @angle - Math.PI, @angle ]
+    [ x, y ] = @edgePoint point, rad + @radius
+    @drawArc x, y, rad, @bodyColor, start, end
+  calcEarSize: ->
+    ratio = @auditoryRange() / @genes.auditoryRange[2]
+    size = ratio * @radius / 3
+    Math.max size, 1
   calcEyeSize: ->
     ratio = @visualRange() / @genes.visualRange[2]
     size = ratio * @radius / 4
