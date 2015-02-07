@@ -659,6 +659,7 @@ class Thing
   jitter: -> 0
   stationary: -> !( @velocity[0] || @velocity[1] )
   move: ->
+  ctx: -> @context ?= @universe.ctx
   draw: -> @drawBody()
   drawBody: -> @drawCircle(
       @x
@@ -670,7 +671,7 @@ class Thing
   drawCircle: ( x, y, radius, color ) -> @drawArc x, y, radius, color, 0, tau
   drawArc: ( x, y, radius, color, start, end ) ->
     return unless radius > 0
-    ctx = @universe.ctx
+    ctx = @ctx()
     ctx.beginPath()
     ctx.arc x, y, radius, start, end
     ctx.fillStyle = color
@@ -960,6 +961,7 @@ class Animal extends Organism
   draw: ->
     super()
     @drawHead()
+    @tailSize ?= @calcTailSize()
     @drawTail()
   # some decorations that let us see the animal's angle of vision
   # the direction of its gaze, and where it's headed
@@ -977,6 +979,9 @@ class Animal extends Organism
     [ start, end ] = if left then [ @angle, @angle + Math.PI ] else [ @angle - Math.PI, @angle ]
     [ x, y ] = @edgePoint point, rad + @radius
     @drawArc x, y, rad, @bodyColor, start, end
+  calcTailSize: ->
+    size = @radius * @maxAcceleration() / @genes.maxAcceleration[2](@)
+    Math.max 2, size
   calcEarSize: ->
     ratio = @auditoryRange() / @genes.auditoryRange[2]
     size = ratio * @radius / 3
@@ -992,8 +997,8 @@ class Animal extends Organism
   drawTail: ->
     a = @angle + Math.PI
     [ x1, y1 ] = @edgePoint a
-    [ x2, y2 ] = @edgePoint a, @radius * 1.5
-    c = @universe.ctx
+    [ x2, y2 ] = @edgePoint a, @radius + @tailSize
+    c = @ctx()
     c.beginPath()
     c.moveTo x1, y1
     c.lineTo x2, y2
