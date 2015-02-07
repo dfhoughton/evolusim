@@ -263,14 +263,11 @@ drawChart = (ct=chartType)->
     options =
       title: titleize decamelize(title)
       width: width
-      explorer:
-        axis: 'horizontal'
-        keepInBounds: true
       height: height
       hAxis:
         title: htitle
-        viewWindow:
-          min: Math.max 1, rows.length - 400
+        viewWindow: 
+          min: Math.max 1, rows.length - 500
       vAxis:
         title: vtitle
     if specs.type == 'interval'
