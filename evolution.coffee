@@ -1,5 +1,6 @@
 # constants
-qt = Math.PI / 2
+qt  = Math.PI / 2
+tau = Math.PI * 2
 
 # general handle on everything; keeps track of geometry of entities it contains
 class Universe
@@ -670,7 +671,7 @@ class Thing
     return unless radius > 0
     ctx = @universe.ctx
     ctx.beginPath()
-    ctx.arc x, y, radius, 0, Math.PI*2
+    ctx.arc x, y, radius, 0, tau
     ctx.fillStyle = color
     ctx.fill()
   setAttributes: ( options = {} ) ->
@@ -795,7 +796,7 @@ class Organism extends Thing
   # choose a pace to try to place a baby
   babyPoint: ->
     length = 2 * @radius + Math.random() * ( @dispersalRadius() - 2 * @radius )
-    angle = Math.random() * Math.PI * 2
+    angle = Math.random() * tau
     x = Math.round( @x + length * Math.cos angle )
     y = Math.round( @y + length * Math.sin angle )
     # bounce points outside universe back in
@@ -963,12 +964,17 @@ class Animal extends Organism
   # the direction of its gaze, and where it's headed
   drawHead: ->
     inc = @visualAngle() * qt
-    @drawEye inc, 1
-    @drawEye -inc, 1
-  drawEye: ( inc, r ) ->
+    @eyeSize ?= @calcEyeSize()
+    @drawEye inc
+    @drawEye -inc
+  calcEyeSize: ->
+    ratio = @visualRange() / @genes.visualRange[2]
+    size = ratio * @radius / 4
+    Math.max size, .75
+  drawEye: (inc) ->
     a = @angle + inc
     [ x, y ] = @edgePoint a
-    @drawCircle x, y, r, 'black'
+    @drawCircle x, y, @eyeSize, 'black'
   drawTail: ->
     a = @angle + Math.PI
     [ x1, y1 ] = @edgePoint a
