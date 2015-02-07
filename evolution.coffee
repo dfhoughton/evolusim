@@ -1,6 +1,5 @@
 # constants
 qt  = Math.PI / 2
-et  = qt / 2
 tau = Math.PI * 2
 
 # general handle on everything; keeps track of geometry of entities it contains
@@ -231,7 +230,7 @@ class Universe
     w = @width
     randY = shuffle [0...h]
     for x in shuffle [0...w]
-      ys = used[x] ||= []
+      ys = used[x] ?= []
       for y in randY
         continue if ys[y]
         ys[y] = true
@@ -324,7 +323,7 @@ class Universe
   # make a collection of points fitting inside the given radius
   dot: (radius) ->
     radius = Math.round radius
-    @dotCache[radius] ||= ( =>
+    @dotCache[radius] ?= ( =>
       boundary = @topLeftArc radius
       points = []
       cherry = boundary.shift() if boundary[0][0] == 0
@@ -361,7 +360,7 @@ class Universe
   # the steps involved in one go of the universe's clock
   go: ->
     @goTime  = new Date()
-    @timer ||= @goTime
+    @timer ?= @goTime
     @change  = false
     @tick   += 1
     @visitThings(
@@ -495,8 +494,8 @@ class Universe
     names = {}
     @visitThings(
       (t) ->
-        n = names[t.type] ||= t.typeName()
-        counts[n] ||= 0
+        n = names[t.type] ?= t.typeName()
+        counts[n] ?= 0
         counts[n] += 1
       false, true
     )
@@ -625,11 +624,11 @@ class Cell
     ret = []
     for t in @inhabitants when t != thing
       ret.push t
-      thing.others[t.id] ||= @universe.trig thing, t
+      thing.others[t.id] ?= @universe.trig thing, t
     for n in @neighbors when n[1] <= distance
       for t in n[0].inhabitants
         ret.push t
-        thing.others[t.id] ||= @universe.trig thing, t
+        thing.others[t.id] ?= @universe.trig thing, t
     ret
 
 # something in the universe
@@ -641,7 +640,7 @@ class Thing
     uni.change = true
     [ @x, @y ] = location
     @velocity = [ 0, 0 ]
-    @radius ||= 5
+    @radius ?= 5
     @type = Thing
     @others = {}
     uni.addThing @ unless @dontAdd
@@ -684,7 +683,7 @@ class Thing
     candidates = @cell.near @, @radius
     @universe.near @, @radius, 1, {}, candidates
   margins: ->
-    m = @marges ||= []
+    m = @marges ?= []
     return m if m.length
     fi = Math.PI * @visualAngle() / 2
     t1 = @angle - fi
@@ -706,7 +705,7 @@ class Thing
 class Stone extends Thing
   constructor: ( location, options = {} ) ->
     super location, options
-    @bodyColor ||= 'grey'
+    @bodyColor ?= 'grey'
     @radius = options.radius || 8
     @type = Stone
   drag: -> 0
@@ -714,9 +713,9 @@ class Stone extends Thing
 class Organism extends Thing
   constructor: ( location, options = {} ) ->
     super location, options
-    @genes      ||= @defaultGenes()
-    @hp         ||= @health() / 2
-    @generation ||= 1
+    @genes      ?= @defaultGenes()
+    @hp         ?= @health() / 2
+    @generation ?= 1
     @radius = options.radius || 5
     @tick   = @universe.tick
     @babies = 0
@@ -844,7 +843,7 @@ class Organism extends Thing
     super()
     @hr = null
   healthRatio: ->
-    @hr ||= @hp / @health()
+    @hr ?= @hp / @health()
 
 class Plant extends Organism
   constructor: ( location, options = {} ) ->
@@ -915,7 +914,7 @@ class Animal extends Organism
       @genes.maxAcceleration[0] = @genes.maxAcceleration[0]()
     else
       @genes.maxAcceleration[0]
-  maxSpeed: -> @maxSp ||= @radius * 1.5
+  maxSpeed: -> @maxSp ?= @radius * 1.5
   react: ->
     super()
     x = 0
