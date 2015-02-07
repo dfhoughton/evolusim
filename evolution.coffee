@@ -1,3 +1,6 @@
+# constants
+qt = Math.PI / 2
+
 # general handle on everything; keeps track of geometry of entities it contains
 class Universe
   # default initialization parameters
@@ -959,13 +962,13 @@ class Animal extends Organism
   # some decorations that let us see the animal's angle of vision
   # the direction of its gaze, and where it's headed
   drawHead: ->
-    inc = @visualAngle() * Math.PI / 2
-    la = @angle - inc
-    ra = @angle + inc
-    [ lx, ly ] = @edgePoint la
-    [ rx, ry ] = @edgePoint ra
-    @drawCircle lx, ly, 1, 'black'
-    @drawCircle rx, ry, 1, 'black'
+    inc = @visualAngle() * qt
+    @drawEye inc, 1
+    @drawEye -inc, 1
+  drawEye: ( inc, r ) ->
+    a = @angle + inc
+    [ x, y ] = @edgePoint a
+    @drawCircle x, y, r, 'black'
   drawTail: ->
     a = @angle + Math.PI
     [ x1, y1 ] = @edgePoint a
