@@ -361,8 +361,11 @@ tryLoad = (making=true) ->
       cd = byId "#{child.innerHTML}-chart"
       if cd
         p = create 'p', 'wait'
-        cd.appendChild p
         p.appendChild text('Charts will appear here when the simulation starts provided Google charts can be loaded.')
+        if cd.firstChild
+          cd.insertBefore p, cd.firstChild
+        else
+          cd.appendChild p
   firstClick.click()
   byId('about').style.width = byId('tabs').clientWidth - 20
   tryLoad(false)
