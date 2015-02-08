@@ -139,9 +139,17 @@ class Universe
     createCreatures Carnivore, 'carnivores'
     # keep an inert instance of each type in its initial state
     @seeds =
+      stone:     new Stone [0,0], paramsForType( 'stones', true )
       plant:     new Plant [0,0], paramsForType( 'plants', true )
       herbivore: new Herbivore [0,0], paramsForType( 'herbivores', true )
       carnivore: new Carnivore [0,0], paramsForType( 'carnivores', true )
+  # obtains the maximum radius of any thing in the universe
+  maxRadius: ->
+    return @maxRadius unless @maxRadius.nil?
+    mx = 0
+    for t, o of @seeds
+      mx = o.radius if o.radius > mx
+    @maxRadius = mx
   # iterate over all things in the universe
   visitThings: ( f, returns, safe ) ->
     ret = [] if returns
@@ -153,8 +161,15 @@ class Universe
             v = f(t)
             ret.push v if returns
     ret
+  # find all things overlapping (minus appendages) overlapping a given point
   thingsAt: ( x, y ) ->
-    t for t in @cellAt( x, y ).inhabitants when t.radius > Math.sqrt( (t.x - x)**2 + (t.y - y )**2 )
+    c = @cellAt( x, y )
+    test = (t) -> t.radius > Math.sqrt( (t.x - x)**2 + (t.y - y )**2 )
+    ret = []
+    ret.push t for t in c.inhabitants when test t
+    for other in c.neighbors when other[1] <= @maxRadius
+      ret.push t for t in other[0].inhabitants when test t
+    ret
   cellAt: ( x, y ) -> @cells[ x // @cellWidth ][ y // @cellWidth ]
   # place a thing in the appropriate cell
   place: (thing, onlyMovingIn) ->
