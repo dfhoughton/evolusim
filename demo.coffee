@@ -52,7 +52,7 @@ create = (tag, cz, id) ->
   e.id = id if id?
   e
 
-chartType = 'options'
+chartType = 'about'
 [ u, makeCharts, loaded, munged ] = [ null, false, false, false ]
 convertParams = (obj=initializationParameters) ->
   copy = {}
@@ -263,7 +263,7 @@ clearCharts = ->
       chart.clearChart() if chart = specs.chart
       specs.rows = []
 drawChart = (ct=chartType)->
-  return if ct == 'options'
+  return if ct == 'options' or ct == 'about'
   for title, specs of evoData.charts[ct] || {}
     rows = trimData specs.rows, 500
     return unless rows.length && rows[0].length
@@ -313,11 +313,11 @@ drawChart = (ct=chartType)->
     chart.draw data, options
 tabs = []
 sibs = []
-restoreOptions = ( ->
+restoreAbout = ( ->
   t = byId 'tabs'
   c = t.firstChild
   while c = c.nextSibling
-    break if c.innerHTML == 'options'
+    break if c.innerHTML == 'about'
   -> tabClicked(c)
   )()
 tabClicked = (c) ->
@@ -326,7 +326,7 @@ tabClicked = (c) ->
   c.setAttribute 'class', 'active'
   t.style.display = 'none' for t in tabs
   chartType = c.innerHTML
-  if chartType == 'options' or chartType == 'explanation'
+  if chartType == 'options' or chartType == 'about'
     makeCharts = false
     content = byId chartType
     content.style.display = 'table'
@@ -341,10 +341,10 @@ tryLoad = (making=true) ->
       google.setOnLoadCallback drawChart
       loaded = true
   catch e
-    alert "Could not make charts: #{e}" unless chartType == 'options'
+    alert "Could not make charts: #{e}" unless chartType == 'options' or chartType == 'about'
     makeCharts = false
     loaded = false
-    restoreOptions()
+    restoreAbout()
 ( ->
   makeInputs()
   div = byId 'tab-div'
@@ -354,6 +354,7 @@ tryLoad = (making=true) ->
   while child = child.nextSibling
     if child.nodeType == 1 && child.className != 'buffer'
       sibs.push child
+      firstClick = child if child.innerHTML == 'about'
       child.onclick = ( (c) -> 
         -> tabClicked c
         )(child)
@@ -362,5 +363,7 @@ tryLoad = (making=true) ->
         p = create 'p', 'wait'
         cd.appendChild p
         p.appendChild text('Charts will appear here when the simulation starts provided Google charts can be loaded.')
+  firstClick.click()
+  byId('about').style.width = byId('tabs').clientWidth - 20
   tryLoad(false)
 )()
