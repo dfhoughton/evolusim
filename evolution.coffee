@@ -703,6 +703,11 @@ class Thing
       while @marges.length
         @universe.geoPool.push @marges.pop()
   healthRatio: -> 1
+  # returns the outer dimentions of a box sufficient to hold a vertically oriented thing
+  # and the point that is the thing's apparent center
+  geometry: ->
+    width = 2 * @radius
+    [ width, width, @radius, @radius ]
 
 class Stone extends Thing
   constructor: ( location, options = {} ) ->
@@ -959,6 +964,15 @@ class Animal extends Organism
   reactToOther: ( other, data ) ->
   prey: (other) ->
     false
+  geometry: ->
+    @tailSize ?= @calcTailSize()
+    @earSize  ?= @calcEarSize()
+    @eyeSize  ?= @calcEyeSize()
+    width = 2 * ( @radius + @earSize )
+    height = 2 * @radius + @tailSize + @eyeSize
+    x = @radius + @earSize
+    y = @eyeSize / 2  + @radius
+    [ width, height, x, y ]
   draw: ->
     super()
     @drawHead()
