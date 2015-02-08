@@ -153,11 +153,12 @@ class Universe
             v = f(t)
             ret.push v if returns
     ret
+  thingsAt: ( x, y ) ->
+    t for t in @cellAt( x, y ).inhabitants when t.radius > Math.sqrt( (t.x - x)**2 + (t.y - y )**2 )
+  cellAt: ( x, y ) -> @cells[ x // @cellWidth ][ y // @cellWidth ]
   # place a thing in the appropriate cell
   place: (thing, onlyMovingIn) ->
-    column = Math.floor( thing.x / @cellWidth )
-    row = Math.floor( thing.y / @cellWidth )
-    cell = @cells[column][row]
+    cell = @cellAt thing.x, thing.y
     if onlyMovingIn
       cell.moved.push thing
     else

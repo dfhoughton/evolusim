@@ -20,10 +20,18 @@ initializationParameters =
       init:
         bodyColor: '#ec2200'
         radius: [ 6, 2, 20, 'body size' ]
+
+# some jQuery-esque convenience functions
 byId = (id) -> document.getElementById(id)
 byClass = (cz) ->
   wonky = document.getElementsByClassName cz
   wonky.item(i) for i in [0...wonky.length]
+onEvent = ( type, e, f ) ->
+  name = 'on' + type
+  old = e[name]
+  if old
+    f = (e) -> f(e); old(e)
+  e.name = f
 trimNum = (n) -> parseFloat n.toPrecision(3)
 decamelize = (str) ->
   str = str.replace /([a-z])([A-Z])/g, (t) -> t.charAt(0) + ' ' + t.charAt(1).toLowerCase()
@@ -43,6 +51,7 @@ create = (tag, cz, id) ->
   e.setAttribute( 'class', cz ) if cz?
   e.id = id if id?
   e
+
 chartType = 'options'
 [ u, makeCharts, loaded, munged ] = [ null, false, false, false ]
 convertParams = (obj=initializationParameters) ->
