@@ -858,7 +858,7 @@ class Plant extends Organism
       dispersalRadius: [
         => @radius * 15
         (t) -> t.radius * 3
-        (t) -> t.radius * 20
+        (t) -> t.radius * 10
       ]
     }
   dispersalRadius: ->
@@ -980,7 +980,7 @@ class Animal extends Organism
     [ x, y ] = @edgePoint point, rad + @radius
     @drawArc x, y, rad, @bodyColor, start, end
   calcTailSize: ->
-    size = @radius * @maxAcceleration() / @genes.maxAcceleration[2](@)
+    size = @radius * @maxAcceleration() / @genes.maxAcceleration[2](@   )
     Math.max 2, size
   calcEarSize: ->
     ratio = @auditoryRange() / @genes.auditoryRange[2]

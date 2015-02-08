@@ -21,6 +21,9 @@ initializationParameters =
         bodyColor: '#ec2200'
         radius: [ 6, 2, 20, 'body size' ]
 byId = (id) -> document.getElementById(id)
+byClass = (cz) ->
+  wonky = document.getElementsByClassName cz
+  wonky.item(i) for i in [0...wonky.length]
 trimNum = (n) -> parseFloat n.toPrecision(3)
 decamelize = (str) ->
   str = str.replace /([a-z])([A-Z])/g, (t) -> t.charAt(0) + ' ' + t.charAt(1).toLowerCase()
@@ -41,7 +44,7 @@ create = (tag, cz, id) ->
   e.id = id if id?
   e
 chartType = 'options'
-[ u, makeCharts, loaded ] = [ null, false, false ]
+[ u, makeCharts, loaded, munged ] = [ null, false, false, false ]
 convertParams = (obj=initializationParameters) ->
   copy = {}
   for k,v of obj
@@ -207,6 +210,9 @@ collectData = (u) ->
   byId('animal-count').innerHTML = intFormat u.animalCount()
   byId('herbivore-count').innerHTML = intFormat u.herbivoreCount()
   byId('carnivore-count').innerHTML = intFormat u.carnivoreCount()
+  if loaded and not munged
+    e.remove() for e in byClass 'wait'
+    munged = true
   stats = u.describe()
   for tab, specs of evoData.charts
     for title, details of specs
@@ -250,7 +256,7 @@ clearCharts = ->
 drawChart = (ct=chartType)->
   return if ct == 'options'
   for title, specs of evoData.charts[ct] || {}
-    rows = trimData specs.rows, 2000
+    rows = trimData specs.rows, 500
     return unless rows.length && rows[0].length
     id     = specs.id
     chart  = specs.chart
@@ -266,8 +272,6 @@ drawChart = (ct=chartType)->
       height: height
       hAxis:
         title: htitle
-        viewWindow: 
-          min: Math.max 1, rows.length - 500
       vAxis:
         title: vtitle
     if specs.type == 'interval'
@@ -313,9 +317,10 @@ tabClicked = (c) ->
   c.setAttribute 'class', 'active'
   t.style.display = 'none' for t in tabs
   chartType = c.innerHTML
-  if chartType == 'options'
+  if chartType == 'options' or chartType == 'explanation'
     makeCharts = false
-    byId('options').style.display = 'table'
+    content = byId chartType
+    content.style.display = 'table'
   else
     byId( chartType + '-chart' ).style.display = 'block'
     tryLoad()
@@ -343,5 +348,10 @@ tryLoad = (making=true) ->
       child.onclick = ( (c) -> 
         -> tabClicked c
         )(child)
+      cd = byId "#{child.innerHTML}-chart"
+      if cd
+        p = create 'p', 'wait'
+        cd.appendChild p
+        p.appendChild text('Charts will appear here when the simulation starts provided Google charts can be loaded.')
   tryLoad(false)
 )()
