@@ -31,7 +31,7 @@ onEvent = ( type, e, f ) ->
   old = e[name]
   if old
     f = (e) -> f(e); old(e)
-  e.name = f
+  e[name] = f
 trimNum = (n) -> parseFloat n.toPrecision(3)
 decamelize = (str) ->
   str = str.replace /([a-z])([A-Z])/g, (t) -> t.charAt(0) + ' ' + t.charAt(1).toLowerCase()
