@@ -162,14 +162,17 @@ class Universe
             ret.push v if returns
     ret
   # find all things overlapping (minus appendages) overlapping a given point
+  # sorted nearest to farthest
   thingsAt: ( x, y ) ->
     c = @cellAt( x, y )
-    test = (t) -> t.radius > Math.sqrt( (t.x - x)**2 + (t.y - y )**2 )
-    ret = []
-    ret.push t for t in c.inhabitants when test t
+    ar = []
+    f = (t) ->
+      d = Math.sqrt( (t.x - x)**2 + (t.y - y )**2 )
+      ar.push [ t, d ] if d < t.radius
+    f(t) for t in c.inhabitants
     for other in c.neighbors when other[1] <= @maxRadius
-      ret.push t for t in other[0].inhabitants when test t
-    ret
+      f(t) for t in other[0].inhabitants
+    i[0] for i in ar.sort (a,b) -> a[1] - b[1]
   cellAt: ( x, y ) -> @cells[ x // @cellWidth ][ y // @cellWidth ]
   # place a thing in the appropriate cell
   place: (thing, onlyMovingIn) ->
