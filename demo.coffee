@@ -211,7 +211,7 @@ geneChartSpec = ( type, gene, id ) ->
     collector: statCollector title, (d) -> d.genes[gene]
     rows:      []
   }
-collectData = (u) ->
+collectData = ->
   evoData.generation += 1
   byId('ticks').innerHTML = intFormat evoData.generation
   byId('created').innerHTML = intFormat u.thingsCreated()
@@ -382,6 +382,6 @@ setImages = ->
   firstClick.click()
   byId('about').style.width = byId('tabs').clientWidth - 20
   tryLoad(false)
-  u = makeUniverse()
+  makeUniverse()
   onEvent 'click', byId('universe'), (e) -> console.log u.imageFor('herbivore') if u
 )()
