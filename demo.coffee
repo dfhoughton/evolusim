@@ -357,7 +357,7 @@ setImages = ->
         img.src = data
         img.width = width
         img.height = height
-    
+
 ( ->
   makeInputs()
   div = byId 'tab-div'
@@ -382,5 +382,6 @@ setImages = ->
   firstClick.click()
   byId('about').style.width = byId('tabs').clientWidth - 20
   tryLoad(false)
+  u = makeUniverse()
   onEvent 'click', byId('universe'), (e) -> console.log u.imageFor('herbivore') if u
 )()
