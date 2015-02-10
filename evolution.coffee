@@ -143,13 +143,42 @@ class Universe
       plant:     new Plant [0,0], paramsForType( 'plants', true )
       herbivore: new Herbivore [0,0], paramsForType( 'herbivores', true )
       carnivore: new Carnivore [0,0], paramsForType( 'carnivores', true )
+  # stamps out a png image representing a particular thing
+  imageFor: (type) ->
+    if instance = @seeds[type]
+      [ width, height, x, y ] = instance.geometry()
+      c = document.createElement 'canvas'
+      c.setAttribute 'width', width
+      c.setAttribute 'height', height
+      oldX       = instance.x
+      oldY       = instance.y
+      oldContext = instance.context
+      oldAngle   = instance.angle
+      instance.x       = x
+      instance.y       = y
+      instance.context = c.getContext '2d'
+      instance.angle   = Math.PI * 1.5 # heading up
+      instance.draw()
+      instance.x       = oldX
+      instance.y       = oldY
+      instance.context = oldContext
+      instance.angle   = oldAngle
+      [ c.toDataURL( 'image/png', 1.0 ), width, height, x, y ]
   # obtains the maximum radius of any thing in the universe
   maxRadius: ->
-    return @maxRadius unless @maxRadius.nil?
+    return @mxr if @mxr?
     mx = 0
     for t, o of @seeds
       mx = o.radius if o.radius > mx
-    @maxRadius = mx
+    @mxr = mx
+  maxDimensions: ->
+    return @mxd if @mxd?
+    h = w = 0
+    for t, o of @seeds
+      [ width, height ] = o.geometry()
+      w = width if width > w
+      h = height if height > h
+    @mxd = [ w, h ]
   # iterate over all things in the universe
   visitThings: ( f, returns, safe ) ->
     ret = [] if returns
@@ -986,9 +1015,9 @@ class Animal extends Organism
     @tailSize ?= @calcTailSize()
     @earSize  ?= @calcEarSize()
     @eyeSize  ?= @calcEyeSize()
-    width = 2 * ( @radius + @earSize )
-    height = 2 * @radius + @tailSize + @eyeSize
-    x = @radius + @earSize
+    width = 2 * ( @radius + @earSize + 2 )
+    height = 2 * @radius + @tailSize + @eyeSize + 2
+    x = 2 + @radius + @earSize
     y = @eyeSize / 2  + @radius
     [ width, height, x, y ]
   draw: ->

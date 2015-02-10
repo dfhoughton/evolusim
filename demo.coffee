@@ -121,6 +121,7 @@ makeUniverse = ->
   p = convertParams()
   p.callback = collectData
   u = new Universe 'universe', p
+  setImages()
   unless madeGeneCharts
     for type in [ 'plant', 'herbivore', 'carnivore' ]
       tab = byId "#{type}-chart"
@@ -345,6 +346,18 @@ tryLoad = (making=true) ->
     makeCharts = false
     loaded = false
     restoreAbout()
+setImages = ->
+  for type in [ 'plant', 'stone', 'herbivore', 'carnivore' ]
+    selector = "img." + type
+    images = document.querySelectorAll( "img." + type )
+    if images.length
+      [ data, width, height, x, y ] = u.imageFor type
+      for i in [0...images.length]
+        img = images[i]
+        img.src = data
+        img.width = width
+        img.height = height
+    
 ( ->
   makeInputs()
   div = byId 'tab-div'
@@ -369,4 +382,5 @@ tryLoad = (making=true) ->
   firstClick.click()
   byId('about').style.width = byId('tabs').clientWidth - 20
   tryLoad(false)
+  onEvent 'click', byId('universe'), (e) -> console.log u.imageFor('herbivore') if u
 )()
