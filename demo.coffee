@@ -325,8 +325,8 @@ restoreAbout = ( ->
   )()
 tabClicked = (c) ->
   return if c.className == 'active'
-  s.removeAttribute 'class' for s in sibs
-  c.setAttribute 'class', 'active'
+  s.classList.remove('active') for s in sibs
+  c.classList.add 'active'
   t.style.display = 'none' for t in tabs
   chartType = c.innerHTML
   if chartType == 'options' or chartType == 'about'
