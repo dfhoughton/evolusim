@@ -316,6 +316,7 @@ drawChart = (ct=chartType)->
     chart.draw data, options
 tabs = []
 sibs = []
+regTabs = {}
 restoreAbout = ( ->
   t = byId 'tabs'
   c = t.firstChild
@@ -329,7 +330,7 @@ tabClicked = (c) ->
   c.classList.add 'active'
   t.style.display = 'none' for t in tabs
   chartType = c.innerHTML
-  if chartType == 'options' or chartType == 'about'
+  if c.classList.contains 'reg'
     makeCharts = false
     content = byId chartType
     content.style.display = 'table'
@@ -344,7 +345,7 @@ tryLoad = (making=true) ->
       google.setOnLoadCallback drawChart
       loaded = true
   catch e
-    alert "Could not make charts: #{e}" unless chartType == 'options' or chartType == 'about'
+    alert "Could not make charts: #{e}" unless regTabs[chartType]
     makeCharts = false
     loaded = false
     restoreAbout()
@@ -369,6 +370,7 @@ setImages = ->
   while child = child.nextSibling
     if child.nodeType == 1 && child.className != 'buffer'
       sibs.push child
+      regTabs[child.innerHTML] = true if child.classList.contains 'reg'
       firstClick = child if child.innerHTML == 'about'
       child.onclick = ( (c) -> 
         -> tabClicked c
