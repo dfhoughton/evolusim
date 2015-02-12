@@ -423,14 +423,14 @@ class Universe
         setTimeout(
           ->
             self.babies()
-            self.done = !self.running || self.dead || !self.change
+            self.done = self.dead || !self.change
             setTimeout(
               ->
                 self.draw()
                 setTimeout(
                   ->
                     self.callback(self)
-                    unless self.done
+                    if self.running && !self.done
                       pause = self.pause - new Date().getTime() + self.goTime.getTime()
                       pause = 0 if pause < 0;
                       setTimeout(

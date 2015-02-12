@@ -227,10 +227,11 @@ collectData = ->
   for tab, specs of evoData.charts
     for title, details of specs
       details.collector stats, details.rows
-  if u.done && loaded
+  if loaded and ( u.done or not u.running )
     drawChart e.innerHTML for e in sibs
-    byId('start').innerHTML = 'start'
-    byId('stop').style.display = 'none'
+    if u.done
+      byId('start').innerHTML = 'start'
+      byId('stop').style.display = 'none'
   else if makeCharts
     drawChart()
 window.start = ->
