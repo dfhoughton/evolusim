@@ -229,17 +229,18 @@ collectData = ->
       details.collector stats, details.rows
   if u.done && loaded
     drawChart e.innerHTML for e in sibs
+    byId('start').innerHTML = 'start'
+    byId('stop').style.display = 'none'
   else if makeCharts
     drawChart()
 window.start = ->
-  if u
+  if u && u.running
     u.stop()
     evoData.generation = 0
     clearCharts()
     u.erase()
-  else
-    byId('stop').style.display = 'inline'
-    byId('start').innerHTML = 'restart'
+  byId('stop').style.display = 'inline'
+  byId('start').innerHTML = 'restart'
   makeUniverse()
   u.run()
   byId('stop').innerHTML = 'stop'
