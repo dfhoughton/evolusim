@@ -192,8 +192,7 @@ class Universe
     ret
   # highlight an organism by coloring its belly
   highlight: ( x, y, color ) ->
-    t = ( grep @thingsAt( x, y ), (t) -> t instanceof Organism )[0]
-    if t
+    for t in @thingsAt( x, y ) when t instanceof Organism
       t.belly = color
       t.draw()
   # remove all highlights
