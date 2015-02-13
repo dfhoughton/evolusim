@@ -190,6 +190,19 @@ class Universe
             v = f(t)
             ret.push v if returns
     ret
+  # highlight an organism by coloring its belly
+  highlight: ( x, y, color ) ->
+    t = ( grep @thingsAt( x, y ), (t) -> t instanceof Organism )[0]
+    if t
+      t.belly = color
+      t.draw()
+  # remove all highlights
+  clearHighlights: ->
+    @visitThings(
+      (t) -> t.belly = 'white' if t instanceof Organism
+      false
+      true
+    )
   # find all things overlapping (minus appendages) overlapping a given point
   # sorted nearest to farthest
   thingsAt: ( x, y ) ->
@@ -773,6 +786,7 @@ class Organism extends Thing
     @radius = options.radius || 5
     @tick   = @universe.tick
     @babies = 0
+    @belly ||= 'white'
   describe: ->
     description = super()
     description.health = @health()
@@ -808,7 +822,7 @@ class Organism extends Thing
   drawHunger: -> # show emptiness of belly
     h = @health()
     r = ( @radius - 1 ) * ( h - @hp ) / h
-    @drawCircle( @x, @y, r, 'white' )
+    @drawCircle( @x, @y, r, @belly )
   # maximum health points an organism can retain
   health: -> @genes.health[0]
   # amount of health one loses per round

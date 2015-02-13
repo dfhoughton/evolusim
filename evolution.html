@@ -4,7 +4,7 @@
     <script type="text/javascript" src="https://www.google.com/jsapi?autoload={'modules':[{'name':'visualization','version':'1','packages':['corechart']}]}"></script>
     <script type="text/javascript" src="evolution.js"></script>
     <style type="text/css">
-#universe-wrapper, #controls, .chart, #tab-div, #options, #about, .wait {
+.table-y, .chart, .wait {
   display: table;
   margin: 1em auto;
 }
@@ -75,7 +75,7 @@
     </style>
   </head>
   <body>
-    <div id="universe-wrapper">
+    <div id="universe-wrapper" class="table-y">
       <canvas id="universe" height="400" width="600"></canvas>
     </div>
     <div id="small-stats">
@@ -87,12 +87,12 @@
       <label>Herbivores: <span id="herbivore-count">0</span></label>
       <label>Carnivores: <span id="carnivore-count">0</span></label>
     </div>
-    <div id="controls">
+    <div id="controls" class="table-y">
       <a id="stop" href="#" onclick="stop(this);return false" id="stop" style="display:none">stop</a>
       <a id="start" href="#" onclick="start();return false">start</a>
     </div>
     <div id="charts-div">
-      <div id="tab-div">
+      <div id="tab-div" class="table-y">
         <ul id="tabs">
           <li class="buffer">&nbsp;</li>
           <li class="reg">about</li>
@@ -100,11 +100,23 @@
           <li>plant</li>
           <li>herbivore</li>
           <li>carnivore</li>
+          <li class="reg">fiddle</li>
           <li class="reg">options</li>
           <li class="buffer">&nbsp;</li>
         </ul>
       </div>
-      <div id="about">
+      <div id="fiddle" class="table-y">
+        <h3>Fiddle</h3>
+        <p>
+          This tab provides widgets that let you mess about with the Evolusim universe in
+          various ways.
+        </p>
+        <input type="button" id="clear-cursor" value="Restore Cursor">
+        <h4>Highlight some individual</h4>
+        <input type="color" id="highlight">
+        <p>Select a color then click on the individuals to highlight.</p>
+      </div>
+      <div id="about" class="table-y">
         <h3>About</h3>
         <p>
           This page shows the Evolusim evolution simulator. During a simulation a variety of "organisms"
@@ -141,7 +153,7 @@
         <h4><img class="carnivore float-left"> Carnivores</h4>
         <p>Carnivores like herbivores and, all else being equal, would rather hang out among the plants.</p>
       </div>
-      <div id="options">
+      <div id="options" class="table-y">
         <h4>Initialization Parameters</h4>
       </div>
       <div id="all-chart">

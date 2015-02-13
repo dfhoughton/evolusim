@@ -26,12 +26,17 @@ byId = (id) -> document.getElementById(id)
 byClass = (cz) ->
   wonky = document.getElementsByClassName cz
   wonky.item(i) for i in [0...wonky.length]
-onEvent = ( type, e, f ) ->
+# assign or augment an event handler on an element
+# handler is augmented unless last parameter is true
+onEvent = ( type, e, f, clear ) ->
   name = 'on' + type
-  old = e[name]
-  if old
-    f = (e) -> f(e); old(e)
-  e[name] = f
+  if clear
+    e[name] = f
+  else
+    old = e[name]
+    if old
+      f = (e) -> f(e); old(e)
+    e[name] = f
 trimNum = (n) -> parseFloat n.toPrecision(3)
 decamelize = (str) ->
   str = str.replace /([a-z])([A-Z])/g, (t) -> t.charAt(0) + ' ' + t.charAt(1).toLowerCase()
@@ -387,5 +392,14 @@ setImages = ->
   byId('about').style.width = byId('tabs').clientWidth - 20
   tryLoad(false)
   makeUniverse()
-  onEvent 'click', byId('universe'), (e) -> console.log u.imageFor('herbivore') if u
+  onEvent 'click', byId('clear-cursor'), (e) ->
+    document.body.style.cursor = 'auto'
+    onEvent 'click', byId('universe'), (->), true
+  onEvent 'click', byId('highlight'), (e) ->
+    document.body.style.cursor = 'crosshair'
+    onEvent( 'click', byId('universe'),
+      (e) ->
+        u.highlight e.offsetX, e.offsetY, byId('highlight').value
+      true
+    )
 )()
