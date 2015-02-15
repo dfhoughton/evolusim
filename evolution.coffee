@@ -191,9 +191,10 @@ class Universe
             ret.push v if returns
     ret
   # highlight an organism by coloring its belly
-  highlight: ( x, y, color ) ->
+  highlight: ( x, y, color, inherit ) ->
     for t in @thingsAt( x, y ) when t instanceof Organism
-      t.belly = color
+      t.belly       = color
+      t.inheritMark = inherit
       t.draw()
   # remove all highlights
   clearHighlights: ->
@@ -894,12 +895,14 @@ class Organism extends Thing
             baby = new @type( 
               pt
               {
-                universe:   @universe
-                genes:      genes
-                hp:         @babyCost()
-                radius:     @radius
-                bodyColor:  @bodyColor
-                generation: @generation + 1
+                universe:    @universe
+                genes:       genes
+                hp:          @babyCost()
+                radius:      @radius
+                bodyColor:   @bodyColor
+                inheritMark: @inheritMark
+                belly:       if @inheritMark then @belly else null
+                generation:  @generation + 1
               }
             )
             @babies += 1

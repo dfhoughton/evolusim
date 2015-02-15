@@ -399,7 +399,7 @@ setImages = ->
     document.body.style.cursor = 'crosshair'
     onEvent( 'click', byId('universe'),
       (e) ->
-        u.highlight e.offsetX, e.offsetY, byId('highlight').value
+        u.highlight e.offsetX, e.offsetY, byId('highlight').value, byId('inherit-mark').checked
       true
     )
 )()
