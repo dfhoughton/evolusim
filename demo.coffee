@@ -402,4 +402,28 @@ setImages = ->
         u.highlight e.offsetX, e.offsetY, byId('highlight').value, byId('inherit-mark').checked
       true
     )
+  onEvent 'click', byId('zap'), (e) ->
+    c = create 'canvas'
+    c.setAttribute 'width', 16
+    c.setAttribute 'height', 16
+    ctx = c.getContext '2d'
+    ctx.strokeStyle = 'black'
+    ctx.beginPath()
+    ctx.arc 8, 8, 6, 0, Math.PI * 2
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo 8, 0
+    ctx.lineTo 8, 16
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo 0, 8
+    ctx.lineTo 16, 8
+    ctx.stroke()
+    data = c.toDataURL 'image/png', 1.0
+    document.body.style.cursor = "url(#{data}), auto"
+    onEvent( 'click', byId('universe'),
+      (e) ->
+        u.zap e.offsetX + 8, e.offsetY + 8
+      true
+    )
 )()

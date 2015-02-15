@@ -190,6 +190,11 @@ class Universe
             v = f(t)
             ret.push v if returns
     ret
+  zap: ( x, y, f=( -> true )) ->
+    for t in @thingsAt( x, y ) when f(t)
+      t.dead = true
+      @remThing t
+    @draw()
   # highlight an organism by coloring its belly
   highlight: ( x, y, color, inherit ) ->
     for t in @thingsAt( x, y ) when t instanceof Organism
