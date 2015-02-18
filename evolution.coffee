@@ -190,6 +190,10 @@ class Universe
             v = f(t)
             ret.push v if returns
     ret
+  # remove all things
+  clearThings: ->
+    @visitThings (t) => @remThing t
+    @idBase = 0
   zap: ( x, y, f=( -> true )) ->
     for t in @thingsAt( x, y ) when f(t)
       t.dead = true
@@ -231,6 +235,14 @@ class Universe
       cell.inhabitants.push thing
   # fetch the initial version of a particular type of organism
   urThing: (type) -> @seeds[type.toLowerCase()]
+  # whether the universe consists only of things deliberately added
+  fiddledWith: -> @fiddled
+  addInstance: ( type, x, y ) ->
+    unless @started or @fiddled
+      @fiddled = true
+      @clearThings()
+    c = @seeds[type].clone( x, y )
+    c.draw()
   addThing: (thing) ->
     thing.id = @idBase += 1
     @thingCount++
@@ -304,7 +316,7 @@ class Universe
     throw 'Universe used up!'
   # start the universe going
   run: ->
-    @running = true
+    @running = @started = true
     @go()
   thingsCreated: -> @idBase
   currentThings: -> @thingCount
@@ -702,14 +714,23 @@ class Thing
   constructor: ( location, options = {} ) ->
     throw "I need a universe!" unless options.universe
     @setAttributes options
-    uni = @universe
-    uni.change = true
     [ @x, @y ] = location
     @velocity = [ 0, 0 ]
     @radius ?= 5
     @type = Thing
     @others = {}
-    uni.addThing @ unless @dontAdd
+    unless @dontAdd
+      uni = @universe
+      uni.change = true
+      uni.addThing @
+  # makes a clone of the thing and places it in the universe
+  clone: ( x, y ) ->
+    type = @universe.getType @typeName()
+    c = new type( [x, y], universe: @universe )
+    for k, v of @ when not /^(?:universe|dontAdd|others|angle|x|y)$/.test k
+      c[k] = dup(v)
+    c.angle = Math.random() * tau if @angle?
+    c
   typeName: ->
     s = "" + @type
     s = s.substr 0, s.indexOf '('
@@ -945,7 +966,7 @@ class Animal extends Organism
     @bodyColor = options.bodyColor || 'brown'
     @radius = options.radius || 5
     # intial orientation
-    @angle = Math.random() * Math.PI
+    @angle = Math.random() * tau
     @velocity = [ 0, 0 ]
     @type = Animal
   defaultGenes: ->

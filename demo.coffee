@@ -239,6 +239,7 @@ collectData = ->
       byId('stop').style.display = 'none'
   else if makeCharts
     drawChart()
+fiddled = false
 window.start = ->
   if u && u.running
     u.stop()
@@ -247,7 +248,8 @@ window.start = ->
     u.erase()
   byId('stop').style.display = 'inline'
   byId('start').innerHTML = 'restart'
-  makeUniverse()
+  makeUniverse() unless fiddled
+  fiddled = false
   u.run()
   byId('stop').innerHTML = 'stop'
 window.stop = ->
@@ -354,12 +356,13 @@ tryLoad = (making=true) ->
     makeCharts = false
     loaded = false
     restoreAbout()
+geometries = {}
 setImages = ->
   for type in [ 'plant', 'stone', 'herbivore', 'carnivore' ]
     selector = "img." + type
     images = document.querySelectorAll( "img." + type )
     if images.length
-      [ data, width, height, x, y ] = u.imageFor type
+      [ data, width, height, x, y ] = geometries[type] = u.imageFor type
       for i in [0...images.length]
         img = images[i]
         img.src = data
@@ -426,4 +429,19 @@ setImages = ->
         u.zap e.offsetX + 8, e.offsetY + 8
       true
     )
+  for e in byClass 'adder'
+    do (e) ->
+      type = null
+      for c in e.classList
+        type = c if c != 'adder'
+      x = geometries[type][3]
+      y = geometries[type][4]
+      onEvent 'click', e, (evt) ->
+        document.body.style.cursor = "url(#{e.src}), auto"
+        onEvent( 'click', byId('universe'),
+          (e) ->
+            u.addInstance type, e.offsetX + x, e.offsetY + y
+            fiddled = true unless u.running
+          true
+      )
 )()
