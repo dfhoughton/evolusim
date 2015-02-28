@@ -186,6 +186,17 @@ evoData =
             -> u.urThing('carnivore').bodyColor
           ]
         rows: []
+clearEvoData = ->
+  evoData.generation = 0
+  rowClearer = (obj) ->
+    return false unless obj?
+    if obj.rows instanceof Array
+      obj.rows = []
+    else
+      for k, v of obj
+        if typeof v == 'object'
+          rowClearer v
+  rowClearer evoData.charts
 statCollector = ( type, selector ) ->
   ( stats, rows ) ->
     values = []
@@ -242,19 +253,21 @@ collectData = ->
   else if makeCharts
     drawChart()
 fiddled = false
-window.start = ->
+start = ->
   if u && u.running
     u.stop()
     evoData.generation = 0
     clearCharts()
     u.erase()
   byId('stop').style.display = 'inline'
+  byId('clear').style.display = 'inline'
   byId('start').innerHTML = 'restart'
   makeUniverse() unless fiddled
   fiddled = false
   u.run()
   byId('stop').innerHTML = 'stop'
-window.stop = ->
+  false
+stop = ->
   return unless u
   element = byId 'stop'
   if u.running
@@ -263,6 +276,22 @@ window.stop = ->
   else
     u.run()
     element.innerHTML = 'stop'
+  false
+clear = ->
+  oldCallback = u.callback || ->
+  u.callback = ->
+    oldCallback()
+    clearEvoData()
+    u.stop()
+    u.erase()
+    makeUniverse()
+    byId('stop').style.display = 'none'
+    e = byId 'start'
+    e.style.display = 'inline'
+    e.innerHTML = 'start'
+    byId('clear').style.display = 'none'
+  u.callback() unless u.running
+  false
 trimData = (data, size) ->
   return data if data.length < size
   results = []
@@ -407,6 +436,9 @@ setImages = ->
         u.highlight e.offsetX, e.offsetY, byId('highlight').value, byId('inherit-mark').checked
       true
     )
+  onEvent 'click', byId('stop'), stop
+  onEvent 'click', byId('start'), start
+  onEvent 'click', byId('clear'), clear
   onEvent 'click', byId('zap'), (e) ->
     c = create 'canvas'
     c.setAttribute 'width', 16
