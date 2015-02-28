@@ -237,6 +237,8 @@ collectData = ->
     if u.done
       byId('start').innerHTML = 'start'
       byId('stop').style.display = 'none'
+      u.prime()
+      fiddled = true
   else if makeCharts
     drawChart()
 fiddled = false

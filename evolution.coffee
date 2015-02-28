@@ -475,6 +475,9 @@ class Universe
         )
       0
     )
+  # restore various booleans so a dead universe can be restarted
+  prime: ->
+    @running = @done = @dead = false
   # give every organism an opportunity to eat or starve
   # returns whether any organisms remain alive
   die: ->
@@ -1028,11 +1031,13 @@ class Animal extends Organism
         x += xa
         y += ya
     if x || y
+      @_ma ?= @maxAcceleration()
       m = Math.sqrt( x * x + y * y )
-      if m > @maxAcceleration()
-        f = @maxAcceleration() / m
+      if m > @_ma
+        f = @_ma / m
         x *= f
         y *= f
+      @_ma = null
       [ vx, vy ] = @velocity
       vx += x
       vy += y
@@ -1119,7 +1124,13 @@ class Animal extends Organism
       when @type then @kinAffinity()
       when @foodType
         @foodAffinity() * other.healthRatio() / @healthRatio()
-      when Stone then -20
+      when Stone
+        d = @universe.geoData[@others[other.id]]
+        if d <= other.radius or d <= @radius
+          @_ma ?= @maxSpeed() * 2
+          -20000
+        else
+          -20
       else 0
 class Herbivore extends Animal
   constructor: ( location, options = {} ) ->
