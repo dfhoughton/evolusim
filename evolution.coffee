@@ -195,10 +195,18 @@ class Universe
     @visitThings (t) => @remThing t
     @idBase = 0
   zap: ( x, y, f=( -> true )) ->
+    changed = false
     for t in @thingsAt( x, y ) when f(t)
       t.dead = true
       @remThing t
-    @draw()
+      changed = true
+    setTimeout( ( => @draw() ), 0 ) if changed
+  # given an organism a disease
+  infect: ( x, y, virulence, mortalityRate, cureRate, color, type=Animal ) ->
+    for t in @thingsAt( x, y ) when t instanceof Organism and t instanceof type
+      disease = new Disease virulence, mortalityRate, cureRate, color
+      t.sickness = count: 0, disease: disease
+      t.draw()
   # highlight an organism by coloring its belly
   highlight: ( x, y, color, inherit ) ->
     for t in @thingsAt( x, y ) when t instanceof Organism
@@ -282,19 +290,15 @@ class Universe
     if thing.x < 0
       thing.x *= -1
       vx = thing.velocity[0] *= -1
-      thing.changed = true
     else if thing.x > @width
       thing.x -= thing.x - @width
       vx = thing.velocity[0] *= -1
-      thing.changed = true
     if thing.y < 0
       thing.y *= -1
       vy = thing.velocity[1] *= -1
-      thing.changed = true
     else if thing.y > @height
       thing.y -= thing.y - @height
       vy = thing.velocity[1] *= -1
-      thing.changed = true
     thing.cell.move thing
     return unless thing.angle?
     theta = anglify vx, vy
@@ -452,21 +456,26 @@ class Universe
         self.die()
         setTimeout(
           ->
-            self.babies()
-            self.done = self.dead || !self.change
+            self.cure()
             setTimeout(
               ->
-                self.draw()
+                self.babies()
+                self.done = self.dead || !self.change
                 setTimeout(
                   ->
-                    self.callback(self)
-                    if self.running && !self.done
-                      pause = self.pause - new Date().getTime() + self.goTime.getTime()
-                      pause = 0 if pause < 0;
-                      setTimeout(
-                        -> self.go()
-                        pause
-                      )
+                    self.draw()
+                    setTimeout(
+                      ->
+                        self.callback(self)
+                        if self.running && !self.done
+                          pause = self.pause - new Date().getTime() + self.goTime.getTime()
+                          pause = 0 if pause < 0;
+                          setTimeout(
+                            -> self.go()
+                            pause
+                          )
+                      0
+                    )
                   0
                 )
               0
@@ -478,12 +487,19 @@ class Universe
   # restore various booleans so a dead universe can be restarted
   prime: ->
     @running = @done = @dead = false
+  # give every organism an opportunity to heal from any disease
+  cure: ->
+    @visitThings(
+      (t) -> t.cure() if t instanceof Organism
+      false
+      true
+    )
   # give every organism an opportunity to eat or starve
   # returns whether any organisms remain alive
   die: ->
     @visitThings (t) =>
       return if t.dead
-      return unless t.type
+      return unless t.type and t instanceof Organism
       switch t.type
         when Herbivore
           for other in t.touching()
@@ -491,7 +507,10 @@ class Universe
         when Carnivore
           for other in t.touching()
             t.eat other if other instanceof Herbivore
-      @remThing t if t instanceof Animal && t.hp <= 0
+      if t instanceof Animal and t.hp <= 0 or t.succumbs()
+        @remThing t
+      else if t.isSick()
+        t.expose other for other in t.touching() when other.type? and other.type == t.type
     # @things = grep @things, (t) -> !t.dead
     @dead = true
     for column in @cells
@@ -851,7 +870,9 @@ class Organism extends Thing
   drawHunger: -> # show emptiness of belly
     h = @health()
     r = ( @radius - 1 ) * ( h - @hp ) / h
-    @drawCircle( @x, @y, r, @belly )
+    @drawCircle @x, @y, r, @belly
+    if @isSick()
+      @drawCircle @x, @y, 3 * r / 4, @sickness.disease.color
   # maximum health points an organism can retain
   health: -> @genes.health[0]
   # amount of health one loses per round
@@ -943,6 +964,26 @@ class Organism extends Thing
     @hr = null
   healthRatio: ->
     @hr ?= @hp / @health()
+
+  # disease-related methods
+  # a sick organism has a "sickness", which consists of a disease object and a count
+  # of ticks since the organism contracted the desease
+
+  # determines whether the disease is fatal on a particular tick
+  succumbs: ->
+    if @sickness?
+      @sickness.disease.fatal @, @sickness.count++
+  isSick: -> @sickness? and @sickness.count
+  # expose the other organism to the disease
+  expose: (other) ->
+    return false if other.isSick()
+    if @sickness.disease.catches other
+      other.sickness = count: 0, disease: @sickness.disease.spread()
+      @universe.change = true
+  cure: ->
+    if @isSick() and @sickness.disease.cures @, @sickness.count
+      @sickness = null 
+      @universe.change = true
 
 class Plant extends Organism
   constructor: ( location, options = {} ) ->
@@ -1171,3 +1212,22 @@ class Carnivore extends Animal
     switch other.type
       when Plant then @plantAffinity()
       else super other
+
+class Disease
+  constructor: ( virulence, mortalityRate, cureRate, healthFactor=6, color='green' ) ->
+    @virulence     = virulence
+    @mortalityRate = mortalityRate
+    @cureRate      = cureRate
+    @color         = color
+    @healthFactor  = healthFactor
+    @initParams    = [ virulence, mortalityRate, cureRate ] # to facilitate more sophisticated disease models
+  fatal: ( organism, count ) ->
+    p = @mortalityRate - organism.healthRatio() / @healthFactor
+    p > 0 and Math.random() <= p
+  catches: (organism) ->
+    p = @virulence - organism.healthRatio() / @healthFactor
+    p > 0 and Math.random() <= p
+  spread: -> @
+  cures: ( organism, count ) ->
+    p = @cureRate + organism.healthRatio() / @healthFactor
+    p >= 1 or Math.random() <= p

@@ -400,6 +400,25 @@ setImages = ->
         img.width = width
         img.height = height
 
+crosshairCursor = (color='black') ->
+  c = create 'canvas'
+  c.setAttribute 'width', 16
+  c.setAttribute 'height', 16
+  ctx = c.getContext '2d'
+  ctx.strokeStyle = color
+  ctx.beginPath()
+  ctx.arc 8, 8, 6, 0, Math.PI * 2
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.moveTo 8, 0
+  ctx.lineTo 8, 16
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.moveTo 0, 8
+  ctx.lineTo 16, 8
+  ctx.stroke()
+  c.toDataURL 'image/png', 1.0
+
 ( ->
   makeInputs()
   div = byId 'tab-div'
@@ -423,7 +442,8 @@ setImages = ->
         else
           cd.appendChild p
   firstClick.click()
-  byId('about').style.width = byId('tabs').clientWidth - 20
+  goodWidth = byId('tabs').clientWidth
+  e.style['max-width'] = goodWidth for e in byClass('table-y')
   tryLoad(false)
   makeUniverse()
   onEvent 'click', byId('clear-cursor'), (e) ->
@@ -440,27 +460,29 @@ setImages = ->
   onEvent 'click', byId('start'), start
   onEvent 'click', byId('clear'), clear
   onEvent 'click', byId('zap'), (e) ->
-    c = create 'canvas'
-    c.setAttribute 'width', 16
-    c.setAttribute 'height', 16
-    ctx = c.getContext '2d'
-    ctx.strokeStyle = 'black'
-    ctx.beginPath()
-    ctx.arc 8, 8, 6, 0, Math.PI * 2
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.moveTo 8, 0
-    ctx.lineTo 8, 16
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.moveTo 0, 8
-    ctx.lineTo 16, 8
-    ctx.stroke()
-    data = c.toDataURL 'image/png', 1.0
+    data = crosshairCursor()
     document.body.style.cursor = "url(#{data}), auto"
     onEvent( 'click', byId('universe'),
       (e) ->
         u.zap e.offsetX + 8, e.offsetY + 8
+      true
+    )
+  for id in [ 'disease-virulence', 'disease-mortality', 'disease-cure', 'disease-health' ]
+    input = byId id
+    input.nextSibling.innerHTML = input.value
+    onEvent 'change', input, (e) ->
+      @nextSibling.innerHTML = @value
+  onEvent 'click', byId('disease-wand'), (e) ->
+    data = crosshairCursor 'green'
+    document.body.style.cursor = "url(#{data}), auto"
+    onEvent( 'click', byId('universe'),
+      (e) ->
+        mortalityRate = parseFloat byId('disease-mortality').value
+        virulence     = parseFloat byId('disease-virulence').value
+        cureRate      = parseFloat byId('disease-cure').value
+        healthDivisor = parseFloat byId('disease-cure').value
+        color         = byId('disease-color').value
+        u.infect e.offsetX + 8, e.offsetY + 8, virulence, mortalityRate, cureRate, healthDivisor, color
       true
     )
   for e in byClass 'adder'

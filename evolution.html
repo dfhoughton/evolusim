@@ -126,6 +126,42 @@
         <p><img class="stone adder"></p>
         <p><img class="herbivore adder"></p>
         <p><img class="carnivore adder"></p>
+        <h4>Disease</h4>
+        <p>Click on an animal to give it a communicable disease.</p>
+        <input type="button" value="Disease Wand" id="disease-wand">
+        <h5>virulence</h5>
+        <p>
+          Virulence is the probability that the disease will be communicated to another member
+          of the same species upon touch. A disease with a virulence of 0 will not spread. One
+          with a virulence of 1 will always spread upon touch.
+        </p>
+        <input type="range" min="0" max="1" step="0.01" value="0.9" id="disease-virulence"><span></span>
+        <h5>mortality rate</h5>
+        <p>
+          The mortality rate is the base probability that a diseased animal will die in a given
+          tick.
+        </p>
+        <input type="range" min="0" max="1" step="0.01" value="0.05" id="disease-mortality"><span></span>
+        <h5>cure rate</h5>
+        <p>
+          The cure rate is the base probability that an animal will be cured of the disease in a
+          given tick.
+        </p>
+        <input type="range" min="0" max="1" step="0.01" value="0.02" id="disease-cure"><span></span>
+        <h5>health divisor</h5>
+        <p>
+          The healthier an individual -- the greater its ratio of stored energy to potentially stored
+          energy -- the less likely it is to catch a disease or die of it once caught, and the more
+          likely it is to rid itself of the disease once caught. The health factor modifies this
+          effect. To get the contribution of health toward the probability of any one of these
+          outcomes one divides the health ratio by the health divisor.  
+        </p>
+        <input type="range" min="2" max="10" step="1" value="6" id="disease-health"><span></span>
+        <h5>color</h5>
+        <p>
+          A disease is represented by a dot of color in an organism's belly when it's hungry.
+        </p>
+        <input type="color" value="#000000" id="disease-color">
       </div>
       <div id="about" class="table-y">
         <h3>About</h3>
