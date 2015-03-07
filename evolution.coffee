@@ -202,9 +202,9 @@ class Universe
       changed = true
     setTimeout( ( => @draw() ), 0 ) if changed
   # given an organism a disease
-  infect: ( x, y, virulence, mortalityRate, cureRate, color, type=Animal ) ->
+  infect: ( x, y, virulence, mortalityRate, cureRate, factor, color, type=Animal ) ->
     for t in @thingsAt( x, y ) when t instanceof Organism and t instanceof type
-      disease = new Disease virulence, mortalityRate, cureRate, color
+      disease = new Disease virulence, mortalityRate, cureRate, factor, color
       t.sickness = count: 0, disease: disease
       t.draw()
   # highlight an organism by coloring its belly
@@ -871,7 +871,7 @@ class Organism extends Thing
     h = @health()
     r = ( @radius - 1 ) * ( h - @hp ) / h
     @drawCircle @x, @y, r, @belly
-    if @isSick()
+    if @sickness?
       @drawCircle @x, @y, 3 * r / 4, @sickness.disease.color
   # maximum health points an organism can retain
   health: -> @genes.health[0]

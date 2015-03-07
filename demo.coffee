@@ -480,7 +480,7 @@ crosshairCursor = (color='black') ->
         mortalityRate = parseFloat byId('disease-mortality').value
         virulence     = parseFloat byId('disease-virulence').value
         cureRate      = parseFloat byId('disease-cure').value
-        healthDivisor = parseFloat byId('disease-cure').value
+        healthDivisor = parseFloat byId('disease-health').value
         color         = byId('disease-color').value
         u.infect e.offsetX + 8, e.offsetY + 8, virulence, mortalityRate, cureRate, healthDivisor, color
       true
