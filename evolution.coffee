@@ -1213,6 +1213,7 @@ class Carnivore extends Animal
       when Plant then @plantAffinity()
       else super other
 
+# not the fanciest disease model; adding evolutionary features would be cool
 class Disease
   constructor: ( virulence, mortalityRate, cureRate, healthFactor=6, color='green' ) ->
     @virulence     = virulence
