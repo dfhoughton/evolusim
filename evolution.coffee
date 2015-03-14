@@ -1,6 +1,7 @@
 # constants
-qt  = Math.PI / 2
-tau = Math.PI * 2
+pi  = Math.PI
+qt  = pi / 2
+tau = pi * 2
 
 # general handle on everything; keeps track of geometry of entities it contains
 class Universe
@@ -159,7 +160,7 @@ class Universe
       instance.x       = x
       instance.y       = y
       instance.context = c.getContext '2d'
-      instance.angle   = Math.PI * 1.5 # heading up
+      instance.angle   = pi * 1.5 # heading up
       instance.draw()
       instance.x       = oldX
       instance.y       = oldY
@@ -220,6 +221,7 @@ class Universe
       @topic.topicColor  = @outline
       @topic.inheritMark = false
       @draw()
+      @topic.cell.draw()
   # highlight an organism by coloring its belly
   highlight: ( x, y, color, inherit ) ->
     for t in @thingsAt( x, y ) when t instanceof Organism
@@ -658,9 +660,15 @@ anglify = (x, y) ->
   h = Math.sqrt( x*x + y*y )
   theta = Math.acos( a / h )
   if x < 0
-    if y < 0 then Math.PI + theta else Math.PI - theta
+    if y < 0 then pi + theta else pi - theta
   else
-    if y < 0 then 2 * Math.PI - theta else theta
+    if y < 0 then 2 * pi - theta else theta
+
+# calculates the euclidean distance between two things
+euclid = ( t1, t2 ) ->
+  x = t1.x - t2.x
+  y = t1.y - t2.y
+  Math.sqrt( x*x + y*y )
 
 grep = ( ar, f ) ->
   x for x in ar when f(x)
@@ -848,7 +856,7 @@ class Thing
   margins: ->
     m = @marges ?= []
     return m if m.length
-    fi = Math.PI * @visualAngle() / 2
+    fi = pi * @visualAngle() / 2
     t1 = @angle - fi
     t1 = @universe.tp( Math.sin(t1), Math.cos(t1) )
     t2 = @angle + fi
@@ -1183,7 +1191,7 @@ class Animal extends Organism
   drawEar: (left) ->
     point = @angle + if left then -qt else qt
     rad = @earSize
-    [ start, end ] = if left then [ @angle, @angle + Math.PI ] else [ @angle - Math.PI, @angle ]
+    [ start, end ] = if left then [ @angle, @angle + pi ] else [ @angle - pi, @angle ]
     [ x, y ] = @edgePoint point, rad + @radius
     @drawArc x, y, rad, @bodyColor, start, end
   calcTailSize: ->
@@ -1202,7 +1210,7 @@ class Animal extends Organism
     [ x, y ] = @edgePoint a
     @drawCircle x, y, @eyeSize, 'black'
   drawTail: ->
-    a = @angle + Math.PI
+    a = @angle + pi
     [ x1, y1 ] = @edgePoint a
     [ x2, y2 ] = @edgePoint a, @radius + @tailSize
     c = @ctx()
