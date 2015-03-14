@@ -213,7 +213,9 @@ class Universe
   setTopic: ( x, y ) ->
     candidates = ( t for t in @thingsAt( x, y ) when t instanceof Animal )
     if candidates.length
-      @topic.topicColor  = null if @topic
+      if @topic
+        @highlightTopic false
+        @topic.topicColor = null
       @topic             = candidates[0]
       @topic.topicColor  = @outline
       @topic.inheritMark = false
@@ -535,10 +537,14 @@ class Universe
             break
     @dead
   # set temporary outlines
-  highlightTopic: ->
+  highlightTopic: (turnOn=true) ->
     if @topic
-      color = @outline || 'yellow'
-      other.outline color for other in @topic.nearby()
+      others = @topic.nearby()
+      if turnOn
+        color = @outline || 'yellow'
+        other.outline color for other in others
+      else
+        other.outlined = false for other in others
   # paint a moment in time
   draw: ->
     @erase()
@@ -748,6 +754,24 @@ class Cell
         ret.push t
         thing.others[t.id] ?= @universe.trig thing, t
     ret
+  # debugging methods
+  drawRadius: (radius) ->
+    n[0].draw 'grey', n[1] for n in @neighbors when n[1] <= radius
+    @draw 'black'
+  draw: (color='grey', noise...) ->
+    console.log 'cell', @x, @y, noise
+    @outline(color)
+    @showInhabitants()
+  outline: (color='grey') ->
+    ctx = @universe.ctx
+    ctx.rect @x, @y, @width, @width
+    ctx.strokeStyle = color
+    ctx.stroke()
+  showInhabitants: ->
+    color = @universe.outline
+    for t in @inhabitants
+      t.outline color
+      t.draw()
 
 # something in the universe
 class Thing
