@@ -3,6 +3,17 @@ pi  = Math.PI
 qt  = pi / 2
 tau = pi * 2
 
+# import some functions
+abs    = Math.abs
+acos   = Math.acos
+cos    = Math.cos
+max    = Math.max
+min    = Math.min
+random = Math.random
+round  = Math.round
+sin    = Math.sin
+sqrt   = Math.sqrt
+
 # general handle on everything; keeps track of geometry of entities it contains
 class Universe
   # default initialization parameters
@@ -25,8 +36,8 @@ class Universe
     @options = options # keeping this around for some reason; probably unnecessary
     @width = @canvas.width
     @height = @canvas.height
-    @maxDim = Math.max @width, @height
-    @maxDistance = options.maxDistance || Math.round( Math.max( @width, @height ) / 3 )
+    @maxDim = max @width, @height
+    @maxDistance = options.maxDistance || round( max( @width, @height ) / 3 )
 
     # divide the universe into cells
     @cellWidth = options.cell || @defaults().cell
@@ -75,8 +86,8 @@ class Universe
           sine = x
           cosine = y
         else
-          unless tooFar = Math.abs(x) > maxDistance || Math.abs(y) > maxDistance
-            distance = Math.sqrt( x * x + y * y )
+          unless tooFar = abs(x) > maxDistance || abs(y) > maxDistance
+            distance = sqrt( x * x + y * y )
             unless tooFar ||= distance > maxDistance
               sine = y / distance
               cosine = x / distance
@@ -241,7 +252,7 @@ class Universe
     c = @cellAt( x, y )
     ar = []
     f = (t) ->
-      d = Math.sqrt( (t.x - x)**2 + (t.y - y )**2 )
+      d = sqrt( (t.x - x)**2 + (t.y - y )**2 )
       ar.push [ t, d ] if d < t.radius
     f(t) for t in c.inhabitants
     for other in c.neighbors when other[1] <= @maxRadius
@@ -408,7 +419,7 @@ class Universe
     test = (pt) ->
       [ x, y ] = pt
       r = radius + y
-      Math.sqrt( x * x + r * r ) <= radius
+      sqrt( x * x + r * r ) <= radius
     boundary.push [].concat(candidatePoint) if test(candidatePoint)
     while ((candidatePoint[1] += 1) <= 0)
       while true
@@ -420,7 +431,7 @@ class Universe
     boundary
   # make a collection of points fitting inside the given radius
   dot: (radius) ->
-    radius = Math.round radius
+    radius = round radius
     @dotCache[radius] ?= ( =>
       boundary = @topLeftArc radius
       points = []
@@ -446,8 +457,8 @@ class Universe
     )()
   # collects the points in the universe within radius of (x,y)
   pointsNear: (x, y, radius) ->
-    x = Math.round x
-    y = Math.round y
+    x = round x
+    y = round y
     points = map @dot(radius), (p) -> [ p[0] + x, p[1] + y ]
     w = @width
     h = @height
@@ -649,16 +660,16 @@ class Universe
   pickThing: (type) ->
     type = @getType type
     rightThings = @getThings type
-    rightThings[ ~~( Math.random() * rightThings.length )]
+    rightThings[ ~~( random() * rightThings.length )]
 
 window.Universe = Universe
 
 # converts a vector to its angle
 # solves problem introduced by angle normalization
 anglify = (x, y) ->
-  a = Math.abs x
-  h = Math.sqrt( x*x + y*y )
-  theta = Math.acos( a / h )
+  a = abs x
+  h = sqrt( x*x + y*y )
+  theta = acos( a / h )
   if x < 0
     if y < 0 then pi + theta else pi - theta
   else
@@ -668,7 +679,7 @@ anglify = (x, y) ->
 euclid = ( t1, t2 ) ->
   x = t1.x - t2.x
   y = t1.y - t2.y
-  Math.sqrt( x*x + y*y )
+  sqrt( x*x + y*y )
 
 grep = ( ar, f ) ->
   x for x in ar when f(x)
@@ -691,7 +702,7 @@ shuffle = (ar, dup=false) ->
   ar = [].concat ar if dup
   i = ar.length
   while --i
-    j = ~~( Math.random() * ( i + 1 ) )
+    j = ~~( random() * ( i + 1 ) )
     t = ar[i]
     ar[i] = ar[j]
     ar[j] = t
@@ -743,7 +754,7 @@ class Cell
       y1 = y2 = 0
     x = x1 - x2
     y = y1 - y2
-    Math.sqrt( x * x + y * y )
+    sqrt( x * x + y * y )
   # introduce potentially neighboring cells to each other
   introduce: ( other, maxDistance=@universe.maxDistance ) ->
     d = @distance other
@@ -802,7 +813,7 @@ class Thing
     c = new type( [x, y], universe: @universe )
     for k, v of @ when not /^(?:universe|dontAdd|others|angle|x|y)$/.test k
       c[k] = dup(v)
-    c.angle = Math.random() * tau if @angle?
+    c.angle = random() * tau if @angle?
     c
   typeName: ->
     s = "" + @type
@@ -858,9 +869,9 @@ class Thing
     return m if m.length
     fi = pi * @visualAngle() / 2
     t1 = @angle - fi
-    t1 = @universe.tp( Math.sin(t1), Math.cos(t1) )
+    t1 = @universe.tp( sin(t1), cos(t1) )
     t2 = @angle + fi
-    t2 = @universe.tp( Math.sin(t2), Math.cos(t2) )
+    t2 = @universe.tp( sin(t2), cos(t2) )
     m.push t1
     m.push t2
     m
@@ -915,7 +926,7 @@ class Organism extends Thing
       health: [ 10, 5, (t) -> 2 * t.health() ]
       babyCost: [ 1, 1, (t) -> t.health() / 2 ]
       babyThreshold: [ .5, .1, .9 ]
-      babyTries: [ 2, 1, (t) -> Math.min( 100, t.babyTries() * 2 ) ]
+      babyTries: [ 2, 1, (t) -> min( 100, t.babyTries() * 2 ) ]
       mutationRate: [ .1, 0.01, 1 ]
       mutationRange: [ .1, 0.01, 1 ]
     }
@@ -947,7 +958,7 @@ class Organism extends Thing
     start = @hp
     @hp += @gain()
     @hp -= @need()
-    @hp = Math.min @hp, @health()
+    @hp = min @hp, @health()
     @universe.change = true if start != @hp
   # number of times per baby that one can attempt to find it a cradle
   babyTries: -> @genes.babyTries[0]
@@ -966,22 +977,22 @@ class Organism extends Thing
     mrate = @genes.mutationRate[0]
     mrange = @genes.mutationRange[0]
     for k, v of @genes
-      [ value, min, max ] = v
-      if Math.random() <= mrate # mutation!
-        mi = if typeof min == 'function' then min(@) else min
-        ma = if typeof max == 'function' then max(@) else max
-        delta = Math.random() * mrange * ( ma - mi )
-        delta *= -1 if Math.random() > .5
+      [ value, mn, mx ] = v
+      if random() <= mrate # mutation!
+        mi = if typeof mn == 'function' then mn(@) else mn
+        ma = if typeof mx == 'function' then mx(@) else mx
+        delta = random() * mrange * ( ma - mi )
+        delta *= -1 if random() > .5
         value += delta
-        value = Math.max( mi, Math.min( ma, value ) )
-      genes[k] = [ value, min, max ]
+        value = max( mi, min( ma, value ) )
+      genes[k] = [ value, mn, mx ]
     genes
   # choose a pace to try to place a baby
   babyPoint: ->
-    length = 2 * @radius + Math.random() * ( @dispersalRadius() - 2 * @radius )
-    angle = Math.random() * tau
-    x = Math.round( @x + length * Math.cos angle )
-    y = Math.round( @y + length * Math.sin angle )
+    length = 2 * @radius + random() * ( @dispersalRadius() - 2 * @radius )
+    angle = random() * tau
+    x = round( @x + length * cos angle )
+    y = round( @y + length * sin angle )
     # bounce points outside universe back in
     if x < 0
       x *= -1
@@ -1075,25 +1086,25 @@ class Animal extends Organism
     @bodyColor = options.bodyColor || 'brown'
     @radius = options.radius || 5
     # intial orientation
-    @angle = Math.random() * tau
+    @angle = random() * tau
     @velocity = [ 0, 0 ]
     @type = Animal
   defaultGenes: ->
     @mergeGenes super(), {
-      auditoryRange: [ Math.min( @universe.maxDistance / 3, 20 ), 10, @universe.maxDistance / 2 ]
+      auditoryRange: [ min( @universe.maxDistance / 3, 20 ), 10, @universe.maxDistance / 2 ]
       visualAngle: [ .45, .1, .8 ]
-      visualRange: [ Math.min( @universe.maxDistance / 2 , 30 ), 20, @universe.maxDistance ]
+      visualRange: [ min( @universe.maxDistance / 2 , 30 ), 20, @universe.maxDistance ]
       g: [ 250, 1, 5000 ]
       jitter: [ .05, 0.01, 1 ]
       kinAffinity: [
         -2
-        (t) -> -Math.max( .1, Math.abs(t.kinAffinity()) * 2 )
-        (t) -> Math.max( .1, Math.abs(t.kinAffinity()) * 2 )
+        (t) -> -max( .1, abs(t.kinAffinity()) * 2 )
+        (t) -> max( .1, abs(t.kinAffinity()) * 2 )
       ]
       foodAffinity: [
         10
-        (t) -> -Math.max( .1, Math.abs(t.foodAffinity()) * 2 )
-        (t) -> Math.max( .1, Math.abs(t.foodAffinity()) * 2 )
+        (t) -> -max( .1, abs(t.foodAffinity()) * 2 )
+        (t) -> max( .1, abs(t.foodAffinity()) * 2 )
       ],
       maxAcceleration : [
         => @radius / 2
@@ -1104,7 +1115,7 @@ class Animal extends Organism
   need: -> 0.1
   eat: (other) ->
     @hp += other.hp / 2
-    @hp = Math.min( @health(), @hp ) # you can't exceed maximum health
+    @hp = min( @health(), @hp ) # you can't exceed maximum health
     @universe.remThing other
   visualAngle: -> @genes.visualAngle[0]
   visualRange: -> @genes.visualRange[0]
@@ -1138,7 +1149,7 @@ class Animal extends Organism
         y += ya
     if x || y
       @_ma ?= @maxAcceleration()
-      m = Math.sqrt( x * x + y * y )
+      m = sqrt( x * x + y * y )
       if m > @_ma
         f = @_ma / m
         x *= f
@@ -1147,7 +1158,7 @@ class Animal extends Organism
       [ vx, vy ] = @velocity
       vx += x
       vy += y
-      m = Math.sqrt( vx * vx + vy * vy )
+      m = sqrt( vx * vx + vy * vy )
       if m > @maxSpeed()
         f = @maxSpeed() / m
         vx *= f
@@ -1157,10 +1168,12 @@ class Animal extends Organism
   # influencing entities nearby
   auditoryRange: -> @genes.auditoryRange[0]
   nearby: ->
-    candidates = @cell.near @, Math.max( @visualRange(), @auditoryRange() )
+    ar = @auditoryRange()
+    vr = @visualRange()
+    candidates = @cell.near @, max( vr, ar )
     seen = {}
-    nearby = @universe.near @, 1, @auditoryRange(), seen, candidates
-    nearby.concat @universe.near @, @angle, @visualRange(), seen, candidates
+    nearby = @universe.near @, ar, 1, seen, candidates
+    nearby.concat @universe.near @, vr, @angle, seen, candidates
   reactToOther: ( other, data ) ->
   prey: (other) ->
     false
@@ -1196,15 +1209,15 @@ class Animal extends Organism
     @drawArc x, y, rad, @bodyColor, start, end
   calcTailSize: ->
     size = @radius * @maxAcceleration() / @genes.maxAcceleration[2](@   )
-    Math.max 2, size
+    max 2, size
   calcEarSize: ->
     ratio = @auditoryRange() / @genes.auditoryRange[2]
     size = ratio * @radius / 3
-    Math.max size, 1
+    max size, 1
   calcEyeSize: ->
     ratio = @visualRange() / @genes.visualRange[2]
     size = ratio * @radius / 4
-    Math.max size, .75
+    max size, .75
   drawEye: (inc) ->
     a = @angle + inc
     [ x, y ] = @edgePoint a
@@ -1222,8 +1235,8 @@ class Animal extends Organism
     c.lineCap = 'round'
     c.stroke()
   edgePoint: ( a, r = @radius ) ->
-    x = @x + r * Math.cos a
-    y = @y + r * Math.sin a
+    x = @x + r * cos a
+    y = @y + r * sin a
     [ x, y ]
   affinity: (other) ->
     switch other.type
@@ -1247,8 +1260,8 @@ class Herbivore extends Animal
     @mergeGenes super(), {
       predatorAffinity: [
         -4
-        (t) -> -Math.abs(Math.max(1, t.predatorAffinity())) * 2
-        (t) -> Math.abs(Math.max(1, t.predatorAffinity())) * 2
+        (t) -> -abs(max(1, t.predatorAffinity())) * 2
+        (t) -> abs(max(1, t.predatorAffinity())) * 2
       ]
     }
   affinity: (other) ->
@@ -1268,8 +1281,8 @@ class Carnivore extends Animal
       babyThreshold: [ .4, .1, .9 ]
       plantAffinity: [
         .1
-        (t) -> -Math.abs(Math.max( 1, t.plantAffinity())) * 2
-        (t) -> Math.abs(Math.max( 1, t.plantAffinity())) * 2
+        (t) -> -abs(max( 1, t.plantAffinity())) * 2
+        (t) -> abs(max( 1, t.plantAffinity())) * 2
       ]
     }
   plantAffinity: -> @genes.plantAffinity[0]
@@ -1289,11 +1302,11 @@ class Disease
     @initParams    = [ virulence, mortalityRate, cureRate ] # to facilitate more sophisticated disease models
   fatal: ( organism, count ) ->
     p = @mortalityRate - organism.healthRatio() / @healthFactor
-    p > 0 and Math.random() <= p
+    p > 0 and random() <= p
   catches: (organism) ->
     p = @virulence - organism.healthRatio() / @healthFactor
-    p > 0 and Math.random() <= p
+    p > 0 and random() <= p
   spread: -> @
   cures: ( organism, count ) ->
     p = @cureRate + organism.healthRatio() / @healthFactor
-    p >= 1 or Math.random() <= p
+    p >= 1 or random() <= p
