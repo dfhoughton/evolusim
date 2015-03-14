@@ -213,14 +213,15 @@ class Universe
   setTopic: ( x, y ) ->
     candidates = ( t for t in @thingsAt( x, y ) when t instanceof Animal )
     if candidates.length
+      @topic.topicColor  = null if @topic
       @topic             = candidates[0]
-      @topic.belly       = @outline
+      @topic.topicColor  = @outline
       @topic.inheritMark = false
       @draw()
   # highlight an organism by coloring its belly
   highlight: ( x, y, color, inherit ) ->
     for t in @thingsAt( x, y ) when t instanceof Organism
-      t.belly       = color
+      t.mark        = color
       t.inheritMark = inherit
       t.draw()
   # remove all highlights
@@ -862,7 +863,9 @@ class Organism extends Thing
     @radius = options.radius || 5
     @tick   = @universe.tick
     @babies = 0
+    @mark ||= null
     @belly ||= 'white'
+    @topicColor = null
   describe: ->
     description = super()
     description.health = @health()
@@ -898,7 +901,8 @@ class Organism extends Thing
   drawHunger: -> # show emptiness of belly
     h = @health()
     r = ( @radius - 1 ) * ( h - @hp ) / h
-    @drawCircle @x, @y, r, @belly
+    color = @topicColor || @mark || @belly
+    @drawCircle @x, @y, r, color
     if @sickness?
       @drawCircle @x, @y, 3 * r / 4, @sickness.disease.color
   # maximum health points an organism can retain
@@ -979,6 +983,7 @@ class Organism extends Thing
                 radius:      @radius
                 bodyColor:   @bodyColor
                 inheritMark: @inheritMark
+                mark:        if @inheritMark then @mark else null
                 belly:       if @inheritMark then @belly else null
                 generation:  @generation + 1
               }
