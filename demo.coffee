@@ -125,7 +125,7 @@ chartDiv = ( tab, id ) ->
 makeUniverse = ->
   p = convertParams()
   p.callback = collectData
-  u = new Universe 'universe', p
+  u = new dfh.Universe 'universe', p
   setImages()
   unless madeGeneCharts
     for type in [ 'plant', 'herbivore', 'carnivore' ]

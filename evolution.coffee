@@ -1,3 +1,6 @@
+# claim namespace
+dfh = window.dfh ?= {}
+
 # constants
 PI  = Math.PI
 QT  = PI / 2
@@ -15,7 +18,8 @@ sin    = Math.sin
 sqrt   = Math.sqrt
 
 # general handle on everything; keeps track of geometry of entities it contains
-class Universe
+# this is the only thing added to the dfh namespace
+dfh.Universe = class Universe
   # default initialization parameters
   defaults: ->
     width:  500
@@ -662,8 +666,6 @@ class Universe
     rightThings = @getThings type
     rightThings[ ~~( random() * rightThings.length )]
 
-window.Universe = Universe
-
 # converts a vector to its angle
 # solves problem introduced by angle normalization
 anglify = (x, y) ->
@@ -679,7 +681,7 @@ anglify = (x, y) ->
 euclid = ( t1, t2 ) ->
   x = t1.x - t2.x
   y = t1.y - t2.y
-  sqrt( x*x + y*y )
+  sqrt x*x + y*y
 
 grep = ( ar, f ) ->
   x for x in ar when f(x)
