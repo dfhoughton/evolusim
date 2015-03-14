@@ -467,6 +467,14 @@ crosshairCursor = (color='black') ->
         u.zap e.offsetX + 8, e.offsetY + 8
       true
     )
+  onEvent 'click', byId('outline'), (e) ->
+    data = crosshairCursor 'red'
+    document.body.style.cursor = "url(#{data}), auto"
+    onEvent( 'click', byId('universe'),
+      (e) ->
+        u.setTopic e.offsetX + 8, e.offsetY + 8
+      true
+    )    
   for id in [ 'disease-virulence', 'disease-mortality', 'disease-cure', 'disease-health' ]
     input = byId id
     input.nextSibling.innerHTML = input.value

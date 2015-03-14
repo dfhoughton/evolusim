@@ -143,6 +143,8 @@ class Universe
       plant:     new Plant [0,0], paramsForType( 'plants', true )
       herbivore: new Herbivore [0,0], paramsForType( 'herbivores', true )
       carnivore: new Carnivore [0,0], paramsForType( 'carnivores', true )
+    @topic = null        # organism for which nearby things are outlined
+    @outline = 'yellow'  # color of things outlined around topic
   # stamps out a png image representing a particular thing
   imageFor: (type) ->
     if instance = @seeds[type]
@@ -207,6 +209,14 @@ class Universe
       disease = new Disease virulence, mortalityRate, cureRate, factor, color
       t.sickness = count: 0, disease: disease
       t.draw()
+  # set topical organism
+  setTopic: ( x, y ) ->
+    candidates = ( t for t in @thingsAt( x, y ) when t instanceof Animal )
+    if candidates.length
+      @topic             = candidates[0]
+      @topic.belly       = @outline
+      @topic.inheritMark = false
+      @draw()
   # highlight an organism by coloring its belly
   highlight: ( x, y, color, inherit ) ->
     for t in @thingsAt( x, y ) when t instanceof Organism
@@ -265,6 +275,7 @@ class Universe
   remThing: (thing) ->
     thing.dead = true
     @change = true
+    @topic = null if thing == @topic
     thing.cell.rem thing
     @thingCount--
     for v in ( thing.marges || [] )
@@ -522,9 +533,15 @@ class Universe
             @dead = false
             break
     @dead
+  # set temporary outlines
+  highlightTopic: ->
+    if @topic
+      color = @outline || 'yellow'
+      other.outline color for other in @topic.nearby()
   # paint a moment in time
   draw: ->
     @erase()
+    @highlightTopic()
     for type in [ Stone, Plant, Herbivore, Carnivore]
       @visitThings(
         (t) -> t.draw() if t instanceof type
@@ -741,6 +758,7 @@ class Thing
     @radius ?= 5
     @type = Thing
     @others = {}
+    @outlined = false
     unless @dontAdd
       uni = @universe
       uni.change = true
@@ -770,7 +788,17 @@ class Thing
   move: ->
   ctx: -> @context ?= @universe.ctx
   draw: -> @drawBody()
-  drawBody: -> @drawCircle(
+  outline: (color) -> @outlined = color
+  drawBody: ->
+    if @outlined
+      @drawCircle(
+        @x
+        @y
+        @radius + 2
+        @outlined
+      )
+      @outlined = false
+    @drawCircle(
       @x
       @y
       @radius
