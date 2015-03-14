@@ -1,7 +1,7 @@
 # constants
-pi  = Math.PI
-qt  = pi / 2
-tau = pi * 2
+PI  = Math.PI
+QT  = PI / 2
+TAU = PI * 2
 
 # import some functions
 abs    = Math.abs
@@ -171,7 +171,7 @@ class Universe
       instance.x       = x
       instance.y       = y
       instance.context = c.getContext '2d'
-      instance.angle   = pi * 1.5 # heading up
+      instance.angle   = PI * 1.5 # heading up
       instance.draw()
       instance.x       = oldX
       instance.y       = oldY
@@ -671,9 +671,9 @@ anglify = (x, y) ->
   h = sqrt( x*x + y*y )
   theta = acos( a / h )
   if x < 0
-    if y < 0 then pi + theta else pi - theta
+    if y < 0 then PI + theta else PI - theta
   else
-    if y < 0 then 2 * pi - theta else theta
+    if y < 0 then 2 * PI - theta else theta
 
 # calculates the euclidean distance between two things
 euclid = ( t1, t2 ) ->
@@ -813,7 +813,7 @@ class Thing
     c = new type( [x, y], universe: @universe )
     for k, v of @ when not /^(?:universe|dontAdd|others|angle|x|y)$/.test k
       c[k] = dup(v)
-    c.angle = random() * tau if @angle?
+    c.angle = random() * TAU if @angle?
     c
   typeName: ->
     s = "" + @type
@@ -849,7 +849,7 @@ class Thing
       @bodyColor || 'black'
     )
   drag: ->
-  drawCircle: ( x, y, radius, color ) -> @drawArc x, y, radius, color, 0, tau
+  drawCircle: ( x, y, radius, color ) -> @drawArc x, y, radius, color, 0, TAU
   drawArc: ( x, y, radius, color, start, end ) ->
     return unless radius > 0
     ctx = @ctx()
@@ -867,7 +867,7 @@ class Thing
   margins: ->
     m = @marges ?= []
     return m if m.length
-    fi = pi * @visualAngle() / 2
+    fi = PI * @visualAngle() / 2
     t1 = @angle - fi
     t1 = @universe.tp( sin(t1), cos(t1) )
     t2 = @angle + fi
@@ -990,7 +990,7 @@ class Organism extends Thing
   # choose a pace to try to place a baby
   babyPoint: ->
     length = 2 * @radius + random() * ( @dispersalRadius() - 2 * @radius )
-    angle = random() * tau
+    angle = random() * TAU
     x = round( @x + length * cos angle )
     y = round( @y + length * sin angle )
     # bounce points outside universe back in
@@ -1086,7 +1086,7 @@ class Animal extends Organism
     @bodyColor = options.bodyColor || 'brown'
     @radius = options.radius || 5
     # intial orientation
-    @angle = random() * tau
+    @angle = random() * TAU
     @velocity = [ 0, 0 ]
     @type = Animal
   defaultGenes: ->
@@ -1197,14 +1197,14 @@ class Animal extends Organism
     @earSize ?= @calcEarSize()
     @drawEar()
     @drawEar true
-    inc = @visualAngle() * qt
+    inc = @visualAngle() * QT
     @eyeSize ?= @calcEyeSize()
     @drawEye inc
     @drawEye -inc
   drawEar: (left) ->
-    point = @angle + if left then -qt else qt
+    point = @angle + if left then -QT else QT
     rad = @earSize
-    [ start, end ] = if left then [ @angle, @angle + pi ] else [ @angle - pi, @angle ]
+    [ start, end ] = if left then [ @angle, @angle + PI ] else [ @angle - PI, @angle ]
     [ x, y ] = @edgePoint point, rad + @radius
     @drawArc x, y, rad, @bodyColor, start, end
   calcTailSize: ->
@@ -1223,7 +1223,7 @@ class Animal extends Organism
     [ x, y ] = @edgePoint a
     @drawCircle x, y, @eyeSize, 'black'
   drawTail: ->
-    a = @angle + pi
+    a = @angle + PI
     [ x1, y1 ] = @edgePoint a
     [ x2, y2 ] = @edgePoint a, @radius + @tailSize
     c = @ctx()
@@ -1268,6 +1268,7 @@ class Herbivore extends Animal
     switch other.type
       when Carnivore then @predatorAffinity()
       else super other
+
 class Carnivore extends Animal
   constructor: ( location, options = {} ) ->
     super location, options
