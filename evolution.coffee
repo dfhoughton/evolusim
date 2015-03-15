@@ -1,5 +1,5 @@
 # claim namespace
-dfh = window.dfh ?= {}
+window.dfh ?= {}
 
 # constants
 PI  = Math.PI
@@ -161,6 +161,9 @@ dfh.Universe = class Universe
       carnivore: new Carnivore [0,0], paramsForType( 'carnivores', true )
     @topic = null        # organism for which nearby things are outlined
     @outline = 'yellow'  # color of things outlined around topic
+    # various other instance variables
+    @mxd = @fiddled = @change = @running = @started = @goTime = @done = @dead = @timer = null
+
   # stamps out a png image representing a particular thing
   imageFor: (type) ->
     if instance = @seeds[type]
@@ -236,7 +239,7 @@ dfh.Universe = class Universe
       @topic.topicColor  = @outline
       @topic.inheritMark = false
       @draw()
-      @topic.cell.draw()
+      @topic.cell.drawRadius max(@topic.visualRange(),@topic.auditoryRange()), false
   # highlight an organism by coloring its belly
   highlight: ( x, y, color, inherit ) ->
     for t in @thingsAt( x, y ) when t instanceof Organism
@@ -542,7 +545,6 @@ dfh.Universe = class Universe
         @remThing t
       else if t.isSick()
         t.expose other for other in t.touching() when other.type? and other.type == t.type
-    # @things = grep @things, (t) -> !t.dead
     @dead = true
     for column in @cells
       break unless @dead
@@ -677,12 +679,6 @@ anglify = (x, y) ->
   else
     if y < 0 then 2 * PI - theta else theta
 
-# calculates the euclidean distance between two things
-euclid = ( t1, t2 ) ->
-  x = t1.x - t2.x
-  y = t1.y - t2.y
-  sqrt x*x + y*y
-
 grep = ( ar, f ) ->
   x for x in ar when f(x)
 
@@ -698,6 +694,8 @@ dup = (obj) ->
     copy
   else
     obj
+
+degrees = (radians) -> 360 * radians / TAU
 
 # randomization utility
 shuffle = (ar, dup=false) ->
@@ -776,13 +774,12 @@ class Cell
         thing.others[t.id] ?= @universe.trig thing, t
     ret
   # debugging methods
-  drawRadius: (radius) ->
-    n[0].draw 'grey', n[1] for n in @neighbors when n[1] <= radius
+  drawRadius: (radius, inhabitants=true) ->
+    n[0].draw 'grey', inhabitants for n in @neighbors when n[1] <= radius
     @draw 'black'
-  draw: (color='grey', noise...) ->
-    console.log 'cell', @x, @y, noise
+  draw: (color='grey', inhabitants=true) ->
     @outline(color)
-    @showInhabitants()
+    @showInhabitants() if inhabitants
   outline: (color='grey') ->
     ctx = @universe.ctx
     ctx.rect @x, @y, @width, @width
@@ -800,11 +797,11 @@ class Thing
     throw "I need a universe!" unless options.universe
     @setAttributes options
     [ @x, @y ] = location
-    @velocity = [ 0, 0 ]
-    @radius ?= 5
-    @type = Thing
-    @others = {}
-    @outlined = false
+    @velocity  = [ 0, 0 ]
+    @radius   ?= 5
+    @type      = Thing
+    @others    = {}
+    @outlined  = false
     unless @dontAdd
       uni = @universe
       uni.change = true
@@ -890,6 +887,26 @@ class Thing
   geometry: ->
     width = 2 * @radius
     [ width, width, @radius, @radius ]
+  # debugging methods
+  # distance
+  dist: (t) ->
+    x = @x - t.x
+    y = @y - t.y
+    sqrt x*x + y*y
+  # the angle in radians, measuring clockwise from 3 o'clock, facing t from this
+  absAngle: (t) ->
+    isAbove = @y < t.y
+    isBefore = @x < t.x
+    if @x == t.x
+      return if isAbove then QT else 3 * QT
+    if @y == t.y
+      return if isBefore then 0 else PI
+    theta = PI * acos abs( @x - t.x ) / @dist(t)
+    theta = if isAbove
+      if isBefore then theta else PI - theta
+    else
+      if isBefore then TAU - theta else PI + theta
+    degrees theta
 
 class Stone extends Thing
   constructor: ( location, options = {} ) ->
@@ -905,12 +922,12 @@ class Organism extends Thing
     @genes      ?= @defaultGenes()
     @hp         ?= @health() / 2
     @generation ?= 1
-    @radius = options.radius || 5
-    @tick   = @universe.tick
-    @babies = 0
-    @mark ||= null
-    @belly ||= 'white'
-    @topicColor = null
+    @radius     ?= 5
+    @tick        = @universe.tick
+    @babies      = 0
+    @mark       ?= null
+    @belly      ?= 'white'
+    @hr = @sickness = @topicColor = null
   describe: ->
     description = super()
     description.health = @health()
@@ -1066,9 +1083,9 @@ class Organism extends Thing
 class Plant extends Organism
   constructor: ( location, options = {} ) ->
     super location, options
-    @bodyColor = options.bodyColor || 'green'
-    @radius = options.radius || 4
-    @type = Plant
+    @bodyColor ?= 'green'
+    @radius    ?= 4
+    @type       = Plant
   gain: -> .5
   defaultGenes: ->
     @mergeGenes super(), {
@@ -1082,15 +1099,16 @@ class Plant extends Organism
     dr = @genes.dispersalRadius[0]
     dr = @genes.dispersalRadius[0] = dr() if typeof dr == 'function'
     dr
+
 class Animal extends Organism
   constructor: ( location, options = {} ) ->
     super location, options
-    @bodyColor = options.bodyColor || 'brown'
-    @radius = options.radius || 5
-    # intial orientation
-    @angle = random() * TAU
-    @velocity = [ 0, 0 ]
-    @type = Animal
+    @bodyColor ?= 'brown'
+    @radius    ?= 5
+    @angle      = random() * TAU   # initial orientation
+    @velocity   = [ 0, 0 ]
+    @type       = Animal
+    @foodType = @ma = @maxSp = @tailSize = @earSize  = @eyeSize = null
   defaultGenes: ->
     @mergeGenes super(), {
       auditoryRange: [ min( @universe.maxDistance / 3, 20 ), 10, @universe.maxDistance / 2 ]
@@ -1175,7 +1193,7 @@ class Animal extends Organism
     candidates = @cell.near @, max( vr, ar )
     seen = {}
     nearby = @universe.near @, ar, 1, seen, candidates
-    nearby.concat @universe.near @, vr, @angle, seen, candidates
+    nearby.concat @universe.near @, vr, @visualAngle(), seen, candidates
   reactToOther: ( other, data ) ->
   prey: (other) ->
     false
@@ -1210,7 +1228,7 @@ class Animal extends Organism
     [ x, y ] = @edgePoint point, rad + @radius
     @drawArc x, y, rad, @bodyColor, start, end
   calcTailSize: ->
-    size = @radius * @maxAcceleration() / @genes.maxAcceleration[2](@   )
+    size = @radius * @maxAcceleration() / @genes.maxAcceleration[2](@)
     max 2, size
   calcEarSize: ->
     ratio = @auditoryRange() / @genes.auditoryRange[2]
@@ -1253,17 +1271,40 @@ class Animal extends Organism
         else
           -20
       else 0
+  # some debugging methods
+  showSeen: ->
+    @universe.draw()
+    vr = @visualRange()
+    @cell.drawRadius vr, false
+    candidates = @cell.near @, vr
+    seen = @universe.near @, vr, @visualAngle(), null, candidates
+    for t in seen
+      t.outline()
+      t.draw()
+  showHeard: ->
+    @universe.draw()
+    ar = @auditoryRange()
+    @cell.drawRadius ar, false
+    candidates = @cell.near @, ar
+    heard = @universe.near @, ar, 1, null, candidates
+    for t in heard
+      t.outline()
+      t.draw()
+  logGeometry: (t) ->
+    h = @dist t
+
+
 class Herbivore extends Animal
   constructor: ( location, options = {} ) ->
     super location, options
-    @type = Herbivore
+    @type     = Herbivore
     @foodType = Plant
   defaultGenes: ->
     @mergeGenes super(), {
       predatorAffinity: [
         -4
         (t) -> -abs(max(1, t.predatorAffinity())) * 2
-        (t) -> abs(max(1, t.predatorAffinity())) * 2
+        (t) ->  abs(max(1, t.predatorAffinity())) * 2
       ]
     }
   affinity: (other) ->
@@ -1274,10 +1315,10 @@ class Herbivore extends Animal
 class Carnivore extends Animal
   constructor: ( location, options = {} ) ->
     super location, options
-    @bodyColor = options.bodyColor || 'red'
-    @radius = options.radius || 6
-    @type = Carnivore
-    @foodType = Herbivore
+    @bodyColor ?= 'red'
+    @radius    ?= 6
+    @type       = Carnivore
+    @foodType   = Herbivore
   defaultGenes: ->
     @mergeGenes super(), {
       g: [ 500, 1, 5000 ]
@@ -1285,7 +1326,7 @@ class Carnivore extends Animal
       plantAffinity: [
         .1
         (t) -> -abs(max( 1, t.plantAffinity())) * 2
-        (t) -> abs(max( 1, t.plantAffinity())) * 2
+        (t) ->  abs(max( 1, t.plantAffinity())) * 2
       ]
     }
   plantAffinity: -> @genes.plantAffinity[0]
