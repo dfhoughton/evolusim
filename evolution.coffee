@@ -689,6 +689,7 @@ map = ( ar, f ) ->
   f(x) for x in ar
 
 dup = (obj) ->
+  return null unless obj?
   if ( obj instanceof Array )
     map obj, (o) -> dup o
   else if ( typeof obj == 'object' )
@@ -805,6 +806,7 @@ class Thing
     @type      = Thing
     @others    = {}
     @outlined  = false
+    @marges    = null
     unless @dontAdd
       uni = @universe
       uni.change = true
@@ -869,7 +871,7 @@ class Thing
   margins: ->
     m = @marges ?= []
     return m if m.length
-    fi = PI * @visualAngle() / 2
+    fi = PI * @visualAngle()
     t1 = @angle - fi
     t1 = @universe.tp( sin(t1), cos(t1) )
     t2 = @angle + fi
@@ -904,12 +906,20 @@ class Thing
       return if isAbove then QT else 3 * QT
     if @y == t.y
       return if isBefore then 0 else PI
-    theta = PI * acos abs( @x - t.x ) / @dist(t)
-    theta = if isAbove
-      if isBefore then theta else PI - theta
+    theta = degrees acos abs( @x - t.x ) / @dist(t)
+    if isAbove
+      if isBefore then theta else 180 - theta
     else
-      if isBefore then TAU - theta else PI + theta
-    degrees theta
+      if isBefore then 360 - theta else 180 + theta
+  relativeGeometry: (t) ->
+    offset = @others[t.id]
+    if offset
+      distance: @universe.geoData[offset]
+      sine:     @universe.geoData[offset + 1]
+      cosine:   @universe.geoData[offset + 2]
+      segment:  @universe.geoData[offset + 3]
+    else
+      'beyond maximum distance considered'
 
 class Stone extends Thing
   constructor: ( location, options = {} ) ->
@@ -1293,8 +1303,21 @@ class Animal extends Organism
     for t in heard
       t.outline()
       t.draw()
-  logGeometry: (t) ->
-    h = @dist t
+  relativeGeometry: (t) ->
+    data = super(t)
+    [ t1, t2 ] = @margins()
+    data.auditoryScope = @auditoryRange()
+    data.visualScope =
+      range: @visualRange()
+      left:
+        sine:    @universe.geoData[ t1 + 1 ]
+        cosine:  @universe.geoData[ t1 + 2 ]
+        segment: @universe.geoData[ t1 + 3 ]
+      right:
+        sine:    @universe.geoData[ t2 + 1 ]
+        cosine:  @universe.geoData[ t2 + 2 ]
+        segment: @universe.geoData[ t2 + 3 ]
+    data
 
 
 class Herbivore extends Animal
