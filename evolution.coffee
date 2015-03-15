@@ -830,9 +830,9 @@ class Thing
   stationary: -> !( @velocity[0] || @velocity[1] )
   move: ->
   ctx: -> @context ?= @universe.ctx
-  draw: -> @drawBody()
+  draw: (color=@bodyColor) -> @drawBody(color)
   outline: (color) -> @outlined = color
-  drawBody: ->
+  drawBody: (color=@bodyColor) ->
     if @outlined
       @drawCircle(
         @x
@@ -845,7 +845,7 @@ class Thing
       @x
       @y
       @radius
-      @bodyColor || 'black'
+      color || 'black'
     )
   drag: ->
   drawCircle: ( x, y, radius, color ) -> @drawArc x, y, radius, color, 0, TAU
@@ -957,8 +957,8 @@ class Organism extends Thing
     genes[k] = v for k, v of base
     genes[k] = v for k, v of ext
     genes
-  draw: ->
-    super()
+  draw: (color=@bodyColor) ->
+    super(color)
     @drawHunger()
   drawHunger: -> # show emptiness of belly
     h = @health()
@@ -1206,8 +1206,8 @@ class Animal extends Organism
     x = 2 + @radius + @earSize
     y = @eyeSize / 2  + @radius
     [ width, height, x, y ]
-  draw: ->
-    super()
+  draw: (color=@bodyColor) ->
+    super(color)
     @drawHead()
     @tailSize ?= @calcTailSize()
     @drawTail()
