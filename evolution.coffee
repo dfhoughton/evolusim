@@ -393,30 +393,33 @@ dfh.Universe = class Universe
   # if the thing has a visual angle of 1, or the thing is motionless, all things within the distance are returned
   near: (thing, distance, angle, seen={}, candidates) ->
     nearOnes = []
-    tid = thing.id
+    tid     = thing.id
+    gd      = @geoData
+    others  = thing.others
     if angle == 1
       for t in candidates
         id = t.id
         continue if t.id == tid || seen[id]
-        data = thing.others[id]
+        data = others[id]
         continue unless data
-        if @geoData[data] <= distance
+        if gd[data] <= distance
           seen[id] = true
           nearOnes.push t
     else
       [ t1, t2 ] = thing.margins()
+      le = @geo.le
+      ge = @geo.ge
       if angle <= .5
-        test = (tp) => @geo.le( t1, tp ) && @geo.ge( t2, tp )
+        test = (tp) => le( t1, tp ) && ge( t2, tp )
       else
-        test = (tp) => !( @geo.le( t2, tp ) && @geo.ge( t1, tp) )
-      others = thing.others
+        test = (tp) => !( le( t2, tp ) && ge( t1, tp) )
       for t in candidates
         id = t.id
         continue if id == tid || seen[id]
         tp = others[id]
-        continue unless tp
+        continue unless tp and gd[tp] <= distance
         if test tp
-          seen[id] = true
+          # seen[id] = true  # we do angle == 1 first, so skip caching here
           nearOnes.push t
     nearOnes
   # calculate part of the boundary of a dot
@@ -830,7 +833,7 @@ class Thing
   stationary: -> !( @velocity[0] || @velocity[1] )
   move: ->
   ctx: -> @context ?= @universe.ctx
-  draw: (color=@bodyColor) -> @drawBody(color)
+  draw: (color=@bodyColor) -> @drawBody(color)   # color param is useful during debugging
   outline: (color) -> @outlined = color
   drawBody: (color=@bodyColor) ->
     if @outlined
