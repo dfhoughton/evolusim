@@ -576,6 +576,7 @@ dfh.Universe = class Universe
         (t) -> t.draw() if t instanceof type
         false, true
       )
+    @topic.draw() if @topic  # redraw topic on top of anything with which it overlaps
   # make all the current things react appropriately to the last moment in time
   move: ->
     @visitThings (t) -> t.react()
