@@ -115,20 +115,6 @@ dfh.Universe = class Universe
           @geoData[ offset + 2 ] = cosine
           @geoData[ offset + 3 ] = segment
           offset
-      le: ( offset, other ) =>
-        s1 = @geoData[ offset + 3 ]
-        s2 = @geoData[ other + 3 ]
-        if s1 == s2
-          if s1 % 2 == 0
-            true
-          else
-            sine1 = @geoData[ offset + 1 ]
-            sine2 = @geoData[ offset + 1 ]
-            if s1 == 1 || s1 == 7 then sine1 <= sine2 else sine1 >= sine2
-        else
-          s1 - s2 > 4 || s1 < s2
-      ge: ( offset, other ) =>
-        @geo.le other, offset
       # produces a vector in the TrigPair direction with the given magnitude
       vector: ( offset, magnitude ) =>
         [ @geoData[ offset + 2 ] * magnitude, @geoData[ offset + 1 ] * magnitude ]
@@ -262,7 +248,7 @@ dfh.Universe = class Universe
       d = sqrt( (t.x - x)**2 + (t.y - y )**2 )
       ar.push [ t, d ] if d < t.radius
     f(t) for t in c.inhabitants
-    for other in c.neighbors when other[1] <= @maxRadius
+    for other in c.neighbors when other[1] <= @maxRadius()
       f(t) for t in other[0].inhabitants
     i[0] for i in ar.sort (a,b) -> a[1] - b[1]
   cellAt: ( x, y ) -> @cells[ x // @cellWidth ][ y // @cellWidth ]
@@ -338,6 +324,7 @@ dfh.Universe = class Universe
     theta = anglify vx, vy
     thing.angle = theta + thing.jitter()
     if thing.marges
+      thing.marges.pop() if thing.marges.length
       while thing.marges.length
         @geoPool.push thing.marges.pop()
   # chooses a random location which does not currently contain anything
@@ -406,21 +393,48 @@ dfh.Universe = class Universe
           seen[id] = true
           nearOnes.push t
     else
-      [ t1, t2 ] = thing.margins()
-      le = @geo.le
-      ge = @geo.ge
-      if angle <= .5
-        test = (tp) => le( t1, tp ) && ge( t2, tp )
+      [ t1, t2, d ] = thing.margins()
+      sin1 = gd[ t1 + 1 ]
+      seg1 = gd[ t1 + 3 ]
+      sin2 = gd[ t2 + 1 ]
+      seg2 = gd[ t2 + 3 ]
+      if d
+        s1 = ( seg1 + d ) % 8
+        s2 = ( seg2 + d ) % 8
       else
-        test = (tp) => !( le( t2, tp ) && ge( t1, tp) )
+        s1 = seg1
+        s2 = seg2
       for t in candidates
         id = t.id
         continue if id == tid || seen[id]
         tp = others[id]
         continue unless tp and gd[tp] <= distance
-        if test tp
-          # seen[id] = true  # we do angle == 1 first, so skip caching here
-          nearOnes.push t
+        sin3 = gd[ tp + 1 ]
+        seg3 = gd[ tp + 3 ]
+        keep = if seg3 == seg1 or seg3 == seg2
+          if seg3 % 2
+            true
+          else
+            if seg1 == seg2
+              if seg3 < 5
+                sin1 >= sin3 and sin2 <= sin3
+              else
+                sin1 <= sin3 and sin2 >= sin3
+            else
+              if seg3 == seg1
+                if seg3 < 5
+                  sin1 >= sin3
+                else
+                  sin1 <= sin3
+              else
+                if seg3 < 5
+                  sin2 <= sin3
+                else
+                  sin2 >= sin3
+        else
+          s3 = if d then ( seg3 + d ) % 8 else seg3
+          s1 <= s3 <= s2
+        nearOnes.push t if keep
     nearOnes
   # calculate part of the boundary of a dot
   topLeftArc: (radius) ->
@@ -873,12 +887,16 @@ class Thing
     m = @marges ?= []
     return m if m.length
     fi = PI * @visualAngle()
+    gd = @universe.geoData
     t1 = @angle - fi
-    t1 = @universe.tp( sin(t1), cos(t1) )
+    t1 = @universe.tp sin(t1), cos(t1)
+    s1 = gd[ t1 + 3 ]
     t2 = @angle + fi
-    t2 = @universe.tp( sin(t2), cos(t2) )
+    t2 = @universe.tp sin(t2), cos(t2)
+    s2 = gd[ t2 + 3 ]
     m.push t1
     m.push t2
+    m.push if s1 > s2 then s1 - s2 else 0
     m
   clean: ->
     for k, v of @others
@@ -1169,7 +1187,8 @@ class Animal extends Organism
     super()
     x = 0
     y = 0
-    g = @universe.geo
+    geo = @universe.geo
+    g = @g()
     gd = @universe.geoData
     for other in @nearby()
       influence = @affinity other
@@ -1177,18 +1196,17 @@ class Animal extends Organism
         data = @others[other.id]
         d = gd[data]
         influence /= d * d
-        influence *= @g()
-        [ xa, ya ] = g.vector data, influence
+        influence *= g
+        [ xa, ya ] = geo.vector data, influence
         x += xa
         y += ya
     if x || y
-      @_ma ?= @maxAcceleration()
+      ma = @maxAcceleration()
       m = sqrt( x * x + y * y )
-      if m > @_ma
-        f = @_ma / m
+      if m > ma
+        f = ma / m
         x *= f
         y *= f
-      @_ma = null
       [ vx, vy ] = @velocity
       vx += x
       vy += y

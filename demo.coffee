@@ -1,5 +1,6 @@
 # code to wire the evolution code to the demo page
 initializationParameters =
+  cell: [ 20, 10, 50, 'scale at which universe is indexed; smaller numbers means more speed and more memory consumption' ]
   pause: [ 10, 0, 1000, 'minimum pause between ticks' ]
   maxDistance: [ 60, 30, 100, 'maximum distance an organism can see' ]
   initialCreatures:
