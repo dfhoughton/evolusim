@@ -10,6 +10,7 @@ TAU = PI * 2
 abs    = Math.abs
 acos   = Math.acos
 cos    = Math.cos
+floor  = Math.floor
 max    = Math.max
 min    = Math.min
 random = Math.random
@@ -251,7 +252,15 @@ dfh.Universe = class Universe
     for other in c.neighbors when other[1] <= @maxRadius()
       f(t) for t in other[0].inhabitants
     i[0] for i in ar.sort (a,b) -> a[1] - b[1]
-  cellAt: ( x, y ) -> @cells[ x // @cellWidth ][ y // @cellWidth ]
+  cellAt: ( x, y ) ->
+    x = 0 unless x >= 0
+    y = 0 unless y >= 0
+    w = @cellWidth
+    column = @cells[ div x, w ]
+    return @cellAt( x - 1, y ) unless column
+    cell = column[ div y, w ]
+    return @cellAt( x, y - 1 ) unless cell
+    cell
   # place a thing in the appropriate cell
   place: (thing, onlyMovingIn) ->
     cell = @cellAt thing.x, thing.y
@@ -408,7 +417,9 @@ dfh.Universe = class Universe
         id = t.id
         continue if id == tid || seen[id]
         tp = others[id]
-        continue unless tp and gd[tp] <= distance
+        continue unless tp
+        d3 = gd[tp]
+        continue unless d3 and d3 <= distance
         sin3 = gd[ tp + 1 ]
         seg3 = gd[ tp + 3 ]
         keep = if seg3 == seg1 or seg3 == seg2
@@ -715,6 +726,8 @@ dup = (obj) ->
     obj
 
 degrees = (radians) -> 360 * radians / TAU
+
+div = ( n, d ) -> floor n / d
 
 # randomization utility
 shuffle = (ar, dup=false) ->
@@ -1195,6 +1208,7 @@ class Animal extends Organism
       if influence
         data = @others[other.id]
         d = gd[data]
+        continue unless d
         influence /= d * d
         influence *= g
         [ xa, ya ] = geo.vector data, influence
