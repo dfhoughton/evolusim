@@ -634,7 +634,8 @@ dfh.Universe = class Universe
     grep newCradles, (pt) -> allCradles[pt[0]][pt[1]]
   removeCradles: (allCradles, points) ->
     for pt in points
-      allCradles[pt[0]][pt[1]] = false
+      col = allCradles[pt[0]]
+      col[pt[1]] = false if col
   # stop the universe
   stop: -> @running = false
   start: -> @run() if !@running
@@ -1077,7 +1078,8 @@ class Organism extends Thing
       for i in [1..n]
         for i in [1..@babyTries()]
           pt = @babyPoint()
-          if cradles[pt[0]][pt[1]]
+          column = cradles[pt[0]]
+          if column and column[pt[1]]
             genes = @mitosis()
             @hp -= 1 + @babyCost()
             # put the baby in the cradle
