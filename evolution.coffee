@@ -256,10 +256,13 @@ dfh.Universe = class Universe
     x = 0 unless x >= 0
     y = 0 unless y >= 0
     w = @cellWidth
-    column = @cells[ div x, w ]
-    return @cellAt( x - 1, y ) unless column
-    cell = column[ div y, w ]
-    return @cellAt( x, y - 1 ) unless cell
+    until cell
+      column = @cells[ div x, w ]
+      unless column
+        x--
+        continue
+      cell = column[ div y, w ]
+      y--
     cell
   # place a thing in the appropriate cell
   place: (thing, onlyMovingIn) ->
@@ -1159,7 +1162,7 @@ class Animal extends Organism
   defaultGenes: ->
     @mergeGenes super(), {
       auditoryRange: [ min( @universe.maxDistance / 3, 20 ), 10, @universe.maxDistance / 2 ]
-      visualAngle: [ .45, .1, .8 ]
+      visualAngle: [ .45, .1, .7 ]
       visualRange: [ min( @universe.maxDistance / 2 , 30 ), 20, @universe.maxDistance ]
       g: [ 250, 1, 5000 ]
       jitter: [ .05, 0.01, 1 ]
