@@ -111,10 +111,11 @@ dfh.Universe = class Universe
           @geoPool.push offset
           0
         else
-          @geoData[ offset ]     = distance
-          @geoData[ offset + 1 ] = sine
-          @geoData[ offset + 2 ] = cosine
-          @geoData[ offset + 3 ] = floor segment / 2   # convert the segment into a quadrant
+          gd = @geoData
+          gd[ offset ]     = distance
+          gd[ offset + 1 ] = sine
+          gd[ offset + 2 ] = cosine
+          gd[ offset + 3 ] = floor segment / 2   # convert the segment into a quadrant
           offset
       # produces a vector in the TrigPair direction with the given magnitude
       vector: ( offset, magnitude ) =>
@@ -123,7 +124,8 @@ dfh.Universe = class Universe
       opposite: ( offset ) =>
         return offset unless offset
         op = @geo.data()
-        @geo.calc( op, -@geoData[ offset + 1 ], -@geoData[ offset + 2 ], null, @geoData[offset] )
+        gd = @geoData
+        @geo.calc( op, -gd[ offset + 1 ], -gd[ offset + 2 ], null, gd[offset] )
     }
 
     paramsForType = ( type, dontAdd ) ->
