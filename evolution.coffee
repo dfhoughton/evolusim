@@ -114,7 +114,7 @@ dfh.Universe = class Universe
           @geoData[ offset ]     = distance
           @geoData[ offset + 1 ] = sine
           @geoData[ offset + 2 ] = cosine
-          @geoData[ offset + 3 ] = segment
+          @geoData[ offset + 3 ] = floor segment / 2   # convert the segment into a quadrant
           offset
       # produces a vector in the TrigPair direction with the given magnitude
       vector: ( offset, magnitude ) =>
@@ -226,7 +226,6 @@ dfh.Universe = class Universe
       @topic.topicColor  = @outline
       @topic.inheritMark = false
       @draw()
-      @topic.cell.drawRadius max(@topic.visualRange(),@topic.auditoryRange()), false
   # highlight an organism by coloring its belly
   highlight: ( x, y, color, inherit ) ->
     for t in @thingsAt( x, y ) when t instanceof Organism
@@ -407,15 +406,15 @@ dfh.Universe = class Universe
     else
       [ t1, t2, d ] = thing.margins()
       sin1 = gd[ t1 + 1 ]
-      seg1 = gd[ t1 + 3 ]
+      qdr1 = gd[ t1 + 3 ]
       sin2 = gd[ t2 + 1 ]
-      seg2 = gd[ t2 + 3 ]
+      qdr2 = gd[ t2 + 3 ]
       if d
-        s1 = ( seg1 + d ) % 8
-        s2 = ( seg2 + d ) % 8
+        q1 = 0
+        q2 = ( qdr2 + d ) % 4
       else
-        s1 = seg1
-        s2 = seg2
+        q1 = qdr1
+        q2 = qdr2
       for t in candidates
         id = t.id
         continue if id == tid || seen[id]
@@ -423,32 +422,31 @@ dfh.Universe = class Universe
         continue unless tp
         d3 = gd[tp]
         continue unless d3 and d3 <= distance
-        sin3 = gd[ tp + 1 ]
-        seg3 = gd[ tp + 3 ]
-        keep = if seg3 == seg1 or seg3 == seg2
-          if seg3 % 2
-            true
+        qdr3 = gd[ tp + 3 ]
+        q3 = if d then ( qdr3 + d ) % 4 else qdr3
+        if q1 <= q3 <= q2
+          if q1 < q3 < q2
+            nearOnes.push t
           else
-            if seg1 == seg2
-              if seg3 < 5
-                sin1 >= sin3 and sin2 <= sin3
+            sin3 = gd[ tp + 1 ]
+            risingSine = qdr3 == 0 or qdr3 == 3
+            keep = if qdr1 == qdr2
+              if risingSine
+                sin1 <= sin3 <= sin2
               else
-                sin1 <= sin3 and sin2 >= sin3
+                sin1 >= sin3 >= sin2
             else
-              if seg3 == seg1
-                if seg3 < 5
-                  sin1 >= sin3
-                else
+              if qdr3 == qdr1
+                if risingSine
                   sin1 <= sin3
-              else
-                if seg3 < 5
-                  sin2 <= sin3
                 else
+                  sin1 >= sin3
+              else
+                if risingSine
                   sin2 >= sin3
-        else
-          s3 = if d then ( seg3 + d ) % 8 else seg3
-          s1 <= s3 <= s2
-        nearOnes.push t if keep
+                else
+                  sin2 <= sin3
+            nearOnes.push t if keep
     nearOnes
   # calculate part of the boundary of a dot
   topLeftArc: (radius) ->
@@ -906,14 +904,14 @@ class Thing
     fi = PI * @visualAngle()
     gd = @universe.geoData
     t1 = @angle - fi
-    t1 = @universe.tp sin(t1), cos(t1)
-    s1 = gd[ t1 + 3 ]
+    t1 = @universe.tp sin(t1), cos(t1), null, true
+    q1 = gd[ t1 + 3 ]
     t2 = @angle + fi
-    t2 = @universe.tp sin(t2), cos(t2)
-    s2 = gd[ t2 + 3 ]
+    t2 = @universe.tp sin(t2), cos(t2), null, true
+    q2 = gd[ t2 + 3 ]
     m.push t1
     m.push t2
-    m.push if s1 > s2 then s1 - s2 else 0
+    m.push if q1 > q2 then 4 - q1 else 0  # an adjustment factor to make it easier to compare quadrants
     m
   clean: ->
     for k, v of @others
@@ -950,10 +948,10 @@ class Thing
   relativeGeometry: (t) ->
     offset = @others[t.id]
     if offset
-      distance: @universe.geoData[offset]
-      sine:     @universe.geoData[offset + 1]
-      cosine:   @universe.geoData[offset + 2]
-      segment:  @universe.geoData[offset + 3]
+      distance:  @universe.geoData[offset]
+      sine:      @universe.geoData[offset + 1]
+      cosine:    @universe.geoData[offset + 2]
+      quadrant:  @universe.geoData[offset + 3]
     else
       'beyond maximum distance considered'
 
@@ -1259,25 +1257,25 @@ class Animal extends Organism
     [ width, height, x, y ]
   draw: (color=@bodyColor) ->
     super(color)
-    @drawHead()
+    @drawHead color
     @tailSize ?= @calcTailSize()
-    @drawTail()
+    @drawTail color
   # some decorations that let us see the animal's angle of vision
   # the direction of its gaze, and where it's headed
-  drawHead: ->
+  drawHead: (color) ->
     @earSize ?= @calcEarSize()
-    @drawEar()
-    @drawEar true
+    @drawEar false, color
+    @drawEar true, color
     inc = @visualAngle() * QT
     @eyeSize ?= @calcEyeSize()
     @drawEye inc
     @drawEye -inc
-  drawEar: (left) ->
+  drawEar: (left, color) ->
     point = @angle + if left then -QT else QT
     rad = @earSize
     [ start, end ] = if left then [ @angle, @angle + PI ] else [ @angle - PI, @angle ]
     [ x, y ] = @edgePoint point, rad + @radius
-    @drawArc x, y, rad, @bodyColor, start, end
+    @drawArc x, y, rad, color, start, end
   calcTailSize: ->
     size = @radius * @maxAcceleration() / @genes.maxAcceleration[2](@)
     max 2, size
@@ -1293,7 +1291,7 @@ class Animal extends Organism
     a = @angle + inc
     [ x, y ] = @edgePoint a
     @drawCircle x, y, @eyeSize, 'black'
-  drawTail: ->
+  drawTail: (color) ->
     a = @angle + PI
     [ x1, y1 ] = @edgePoint a
     [ x2, y2 ] = @edgePoint a, @radius + @tailSize
@@ -1302,7 +1300,7 @@ class Animal extends Organism
     c.moveTo x1, y1
     c.lineTo x2, y2
     c.lineWidth = 2
-    c.strokeStyle = @bodyColor
+    c.strokeStyle = color
     c.lineCap = 'round'
     c.stroke()
   edgePoint: ( a, r = @radius ) ->
@@ -1326,7 +1324,6 @@ class Animal extends Organism
   showSeen: ->
     @universe.draw()
     vr = @visualRange()
-    @cell.drawRadius vr, false
     candidates = @cell.near @, vr
     seen = @universe.near @, vr, @visualAngle(), null, candidates
     for t in seen
@@ -1335,7 +1332,6 @@ class Animal extends Organism
   showHeard: ->
     @universe.draw()
     ar = @auditoryRange()
-    @cell.drawRadius ar, false
     candidates = @cell.near @, ar
     heard = @universe.near @, ar, 1, null, candidates
     for t in heard
@@ -1348,13 +1344,13 @@ class Animal extends Organism
     data.visualScope =
       range: @visualRange()
       left:
-        sine:    @universe.geoData[ t1 + 1 ]
-        cosine:  @universe.geoData[ t1 + 2 ]
-        segment: @universe.geoData[ t1 + 3 ]
+        sine:     @universe.geoData[ t1 + 1 ]
+        cosine:   @universe.geoData[ t1 + 2 ]
+        quadrant: @universe.geoData[ t1 + 3 ]
       right:
-        sine:    @universe.geoData[ t2 + 1 ]
-        cosine:  @universe.geoData[ t2 + 2 ]
-        segment: @universe.geoData[ t2 + 3 ]
+        sine:     @universe.geoData[ t2 + 1 ]
+        cosine:   @universe.geoData[ t2 + 2 ]
+        quadrant: @universe.geoData[ t2 + 3 ]
     data
 
 
