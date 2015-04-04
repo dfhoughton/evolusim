@@ -1327,22 +1327,22 @@ class Animal extends Organism
           -20
       else 0
   # some debugging methods
-  showSeen: ->
+  showSeen: (color='black') ->
     @universe.draw()
     vr = @visualRange()
     candidates = @cell.near @, vr
     seen = @universe.near @, vr, @visualAngle(), null, candidates
     for t in seen
       t.outline()
-      t.draw()
-  showHeard: ->
+      t.draw('black')
+  showHeard: (color='purple') ->
     @universe.draw()
     ar = @auditoryRange()
     candidates = @cell.near @, ar
     heard = @universe.near @, ar, 1, null, candidates
     for t in heard
       t.outline()
-      t.draw()
+      t.draw(color)
   relativeGeometry: (t) ->
     data = super(t)
     [ t1, t2 ] = @margins()
