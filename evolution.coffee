@@ -125,7 +125,11 @@ dfh.Universe = class Universe
         return offset unless offset
         op = @geo.data()
         gd = @geoData
-        @geo.calc( op, -gd[ offset + 1 ], -gd[ offset + 2 ], null, gd[offset] )
+        gd[op]       =  gd[offset]
+        gd[ op + 1 ] = -gd[offset + 1]
+        gd[ op + 2 ] = -gd[offset + 2]
+        gd[ op + 3 ] = ( gd[ offset + 3 ] + 2 ) % 4
+        op
     }
 
     paramsForType = ( type, dontAdd ) ->
