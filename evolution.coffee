@@ -1281,7 +1281,7 @@ class Animal extends Organism
     size = @radius * @maxAcceleration() / @genes.maxAcceleration[2](@)
     max 2, size
   calcEarSize: ->
-    ratio = @auditoryRange() / @genes.auditoryRange[2]
+    ratio = @auditoryRange() / @genes.auditoryRange[2](@)
     size = ratio * @radius / 3
     max size, 1
   calcEyeSize: ->
