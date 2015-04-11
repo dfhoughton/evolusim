@@ -270,13 +270,10 @@ dfh.Universe = class Universe
       y--
     cell
   # place a thing in the appropriate cell
-  place: (thing, onlyMovingIn) ->
+  place: (thing) ->
     cell = @cellAt thing.x, thing.y
-    if onlyMovingIn
-      cell.moved.push thing
-    else
-      thing.cell = cell
-      cell.inhabitants.push thing
+    thing.cell = cell
+    cell.inhabitants.push thing
   # fetch the initial version of a particular type of organism
   urThing: (type) -> @seeds[type.toLowerCase()]
   # whether the universe consists only of things deliberately added
@@ -612,12 +609,8 @@ dfh.Universe = class Universe
   # make all the current things react appropriately to the last moment in time
   move: ->
     @visitThings (t) -> t.react()
-    for column in @cells
-      for cell in column
-        while cell.moved.length
-          v = cell.moved.pop()
-          v.cell = cell
-          cell.inhabitants.push v
+    @visitThings (t) =>
+      @moveThing t if t instanceof Animal
     true
   # all surviving things that are able to reproduce
   makeCradles: ->
@@ -759,7 +752,6 @@ class Cell
     @width       = width
     @neighbors   = []
     @inhabitants = []
-    @moved       = []
   # whether this cell is the appropriate container for the thing
   has: (thing) ->
     @x <= thing.x < @farX && @y <= thing.y < @farY
@@ -767,7 +759,7 @@ class Cell
   move: (thing) ->
     unless @has thing
       @rem thing
-      @universe.place thing, true
+      @universe.place thing
   # remove the thing from this cell's purview
   rem: (thing) ->
     for t, i in @inhabitants
@@ -1165,8 +1157,12 @@ class Animal extends Organism
     @foodType = @ma = @maxSp = @tailSize = @earSize  = @eyeSize = null
   defaultGenes: ->
     @mergeGenes super(), {
-      auditoryRange: [ min( @universe.maxDistance / 3, 20 ), 10, @universe.maxDistance / 2 ]
-      visualAngle: [ .45, .1, .7 ]
+      auditoryRange: [
+        min( @universe.maxDistance / 3, 20 )
+        10
+        (t) -> 2 * t.visualRange() / 3
+      ]
+      visualAngle: [ .35, .1, .6 ]
       visualRange: [ min( @universe.maxDistance / 2 , 30 ), 20, @universe.maxDistance ]
       g: [ 250, 1, 5000 ]
       jitter: [ .05, 0.01, 1 ]
@@ -1238,8 +1234,7 @@ class Animal extends Organism
         f = @maxSpeed() / m
         vx *= f
         vy *= f
-      @velocity = [ vx, vy ]
-      @universe.moveThing @
+      @velocity = [ vx, vy ]  # we've adjusted the velocity, but we save the moving until all velocities are adjusted
   # influencing entities nearby
   auditoryRange: -> @genes.auditoryRange[0]
   nearby: ->
