@@ -569,9 +569,11 @@ dfh.Universe = class Universe
       switch t.type
         when Herbivore
           for other in t.touching()
+            break if t.full()
             t.eat other if other instanceof Plant
         when Carnivore
           for other in t.touching()
+            break if t.full()
             t.eat other if other instanceof Herbivore
       if t instanceof Animal and t.hp <= 0 or t.succumbs()
         @remThing t
@@ -619,17 +621,18 @@ dfh.Universe = class Universe
   babies: ->
     cradles = @makeCradles()
     orchards = @makeCradles()
+    organisms = []
     @visitThings(
       (t) =>
         points = @pointsNear t.x, t.y, t.radius * 2
+        organisms.push t if t instanceof Organism
         @removeCradles cradles, points unless t instanceof Plant
         @removeCradles orchards, points unless t instanceof Stone
       false, true
     )
-    @visitThings (t) ->
-      if t instanceof Organism
-        c = if t instanceof Plant then orchards else cradles
-        t.reproduce c
+    for t in shuffle organisms
+      c = if t instanceof Plant then orchards else cradles
+      t.reproduce c
   findCradles: (allCradles, newCradles) ->
     grep newCradles, (pt) -> allCradles[pt[0]][pt[1]]
   removeCradles: (allCradles, points) ->
@@ -995,7 +998,7 @@ class Organism extends Thing
       mutationRange: [ .1, 0.01, 1 ]
     }
   # how far away from its mother a baby can be "born"
-  dispersalRadius: -> 3 * @radius
+  dispersalRadius: -> 2.5 * @radius
   # utility function for extending default genes
   mergeGenes: ( base, ext ) ->
     genes = {}
@@ -1183,6 +1186,7 @@ class Animal extends Organism
       ]
     }
   need: -> 0.1
+  full: -> @hp == @health()
   eat: (other) ->
     @hp += other.hp / 2
     @hp = min( @health(), @hp ) # you can't exceed maximum health
