@@ -563,9 +563,11 @@ dfh.Universe = class Universe
   # give every organism an opportunity to eat or starve
   # returns whether any organisms remain alive
   die: ->
-    @visitThings (t) =>
+    mortal = []
+    @visitThings (t) ->
       return if t.dead
-      return unless t.type and t instanceof Organism
+      mortal.push t if t.type and t instanceof Organism
+    for t in shuffle mortal
       switch t.type
         when Herbivore
           for other in t.touching()
@@ -580,14 +582,10 @@ dfh.Universe = class Universe
       else if t.isSick()
         t.expose other for other in t.touching() when other.type? and other.type == t.type
     @dead = true
-    for column in @cells
-      break unless @dead
-      for cell in column
-        break unless @dead
-        for t in cell.inhabitants
-          if t instanceof Organism
-            @dead = false
-            break
+    for t in mortal
+      unless t.dead
+        @dead = false
+        break
     @dead
   # set temporary outlines
   highlightTopic: (turnOn=true) ->
