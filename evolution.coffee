@@ -514,7 +514,10 @@ dfh.Universe = class Universe
     w = @width
     h = @height
     if x - radius < 0 || x + radius >= w || y - radius < 0 || y + radius >= h
-      grep points, (p) -> 0 <= p[0] < w && 0 <= p[1] < h
+      if @torus
+        map points, (p) -> [ ( p[0] + w ) %% w, ( p[1] + h ) %% h ]
+      else
+        grep points, (p) -> 0 <= p[0] < w && 0 <= p[1] < h
     else
       points
   # the steps involved in one go of the universe's clock
