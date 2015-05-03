@@ -1117,18 +1117,24 @@ class Organism extends Thing
     x = round( @x + length * cos angle )
     y = round( @y + length * sin angle )
     # bounce points outside universe back in
-    if x < 0
-      x *= -1
-    else if x > @universe.width
-      x = 2 * @universe.width - x
-    else if x == @universe.width
-      x -= 1
-    if y < 0
-      y *= -1
-    else if y > @universe.height
-      y = 2 * @universe.height - y
+    w = @universe.width
+    h = @universe.height
+    if @universe.torus
+      x = ( x + w ) %% w
+      y = ( y + h ) %% h
     else
-      y -= 1
+      if x < 0
+        x *= -1
+      else if x > w
+        x = 2 * w - x
+      else if x == w
+        x -= 1
+      if y < 0
+        y *= -1
+      else if y > h
+        y = 2 * h - y
+      else
+        y -= 1
     [ x, y ]
   reproduce: (cradles) ->
     if ( n = @numBabies() ) > 0
