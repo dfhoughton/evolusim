@@ -23,6 +23,7 @@ sqrt   = Math.sqrt
 dfh.Universe = class Universe
   # default initialization parameters
   defaults: ->
+    torus: true
     width:  500
     height: 500
     cell:   20
@@ -38,11 +39,13 @@ dfh.Universe = class Universe
     @canvas = document.getElementById id
     throw "I have no canvas!" unless @canvas
     @ctx = @canvas.getContext '2d'
-    @options = options # keeping this around for some reason; probably unnecessary
-    @width = @canvas.width
-    @height = @canvas.height
-    @maxDim = max @width, @height
+    @options     = options # keeping this around for some reason; probably unnecessary
+    @width       = @canvas.width
+    @height      = @canvas.height
+    @maxDim      = max @width, @height
     @maxDistance = options.maxDistance || round( max( @width, @height ) / 3 )
+    @torus       = options.torus
+    @torus      ?= @defaults().torus
 
     # divide the universe into cells
     @cellWidth = options.cell || @defaults().cell
@@ -287,14 +290,7 @@ dfh.Universe = class Universe
   addThing: (thing) ->
     thing.id = @idBase += 1
     @thingCount++
-    # @addToCollection thing, @things
     @place thing
-  addToCollection: (thing, collection) ->
-    if thing instanceof Animal
-      @trig thing, t for t in collection
-    else
-      @trig t, thing for t in collection when t instanceof Animal
-    collection.push thing
   remThing: (thing) ->
     thing.dead = true
     @change = true
@@ -314,25 +310,40 @@ dfh.Universe = class Universe
       false, true
     )
   # moves a thing based on that things velocity, handling reflection off
-  # the edges of the universe
+  # the edges of the universe, or wrapping the universe if it is toroidal
   moveThing: (thing) ->
     [ vx, vy ] = thing.velocity 
     return unless vx || vy
     @change = true
     thing.x += vx
     thing.y += vy
+    t = @torus
+    w = @width
+    h = @height
     if thing.x < 0
-      thing.x *= -1
-      vx = thing.velocity[0] *= -1
-    else if thing.x > @width
-      thing.x -= thing.x - @width
-      vx = thing.velocity[0] *= -1
+      if t
+        thing.x += w
+      else
+        thing.x *= -1
+        vx = thing.velocity[0] *= -1
+    else if thing.x > w
+      if t
+        thing.x -= w
+      else
+        thing.x -= thing.x - w
+        vx = thing.velocity[0] *= -1
     if thing.y < 0
-      thing.y *= -1
-      vy = thing.velocity[1] *= -1
-    else if thing.y > @height
-      thing.y -= thing.y - @height
-      vy = thing.velocity[1] *= -1
+      if t
+        thing.y += h
+      else
+        thing.y *= -1
+        vy = thing.velocity[1] *= -1
+    else if thing.y > h
+      if t
+        thing.y -= h
+      else
+        thing.y -= thing.y - h
+        vy = thing.velocity[1] *= -1
     thing.cell.move thing
     return unless thing.angle?
     theta = anglify vx, vy
@@ -375,9 +386,10 @@ dfh.Universe = class Universe
     @geo.calc( p, x, y, maxDistance, distance )
   # calculate and store the geometric relationship between two things
   # returns the offset necessary to fetch this information
-  trig: ( t, o ) ->
-    base = o.x - t.x
-    height = o.y - t.y
+  # last two parameters are used in a toroidal universe to handle wrapping around the torus
+  trig: ( t, o, x, y ) ->
+    base = o.x - t.x + x
+    height = o.y - t.y + y
     ti = t.id
     oi = o.id
     t1 = t.others[oi]
@@ -748,8 +760,8 @@ class Cell
     @universe    = universe
     @x           = x
     @y           = y
-    @farX        = x + width
-    @farY        = y + width
+    @farX        = min( x + width, universe.width )
+    @farY        = min( y + width, universe.height )
     @width       = width
     @neighbors   = []
     @inhabitants = []
@@ -768,43 +780,86 @@ class Cell
         @inhabitants.splice i, 1
         break
   # the minimum distance between a point in one cell and a point in the other
+  # and whether this distance involves wrapping in the horizontal or vertical dimensions
   distance: (other) ->
+    t  = @universe.torus
+    w  = @universe.width
+    h  = @universe.height
+    wx = 0
+    wy = 0
     if @x < other.x
-      x1 = @farX
-      x2 = other.x
+      if t
+        if other.x - @farX > w / 2
+          x1 = @x
+          x2 = other.farX - w
+          wx = -w
+        else
+          x1 = @farX
+          x2 = other.x
+      else
+        x1 = @farX
+        x2 = other.x
     else if @x > other.x
-      x1 = @x
-      x2 = other.farX
+      if t
+        if @x - other.farX > w / 2
+          x1 = @farX
+          x2 = other.x + w
+          wx = w
+        else
+          x1 = @x
+          x2 = other.farX
+      else
+        x1 = @x
+        x2 = other.farX
     else
       x1 = x2 = 0
     if @y < other.y
-      y1 = @farY
-      y2 = other.y
+      if t
+        if other.y - @farY > h / 2
+          y1 = @y
+          y2 = other.farY - h
+          wy = -h
+        else
+          y1 = @farY
+          y2 = other.y
+      else
+        y1 = @farY
+        y2 = other.y
     else if @y > other.y
-      y1 = @y
-      y2 = other.farY
+      if t
+        if other.farY - @y > h / 2
+          y1 = @farY
+          y2 = other.y + h
+          wy = h
+        else
+          y1 = @y
+          y2 = other.farY
+      else
+        y1 = @y
+        y2 = other.farY
     else
       y1 = y2 = 0
     x = x1 - x2
     y = y1 - y2
-    sqrt( x * x + y * y )
+    [ sqrt( x * x + y * y ), wx, wy ]
   # introduce potentially neighboring cells to each other
   introduce: ( other, maxDistance=@universe.maxDistance ) ->
-    d = @distance other
+    [ d, wx, wy ] = @distance other
     if d <= maxDistance
-      @neighbors.push [ other, d ]
-      other.neighbors.push [ @, d ]
+      @neighbors.push [ other, d, wx, wy ]
+      other.neighbors.push [ @, d, -wx, -wy ]
   # collect a candidate set of things potentially within the given radius of the thing
   # thing should be an inhabitant of this cell
   near: ( thing, distance=@universe.maxDistance ) ->
     ret = []
     for t in @inhabitants when t != thing
       ret.push t
-      thing.others[t.id] ?= @universe.trig thing, t
+      thing.others[t.id] ?= @universe.trig thing, t, 0, 0
     for n in @neighbors when n[1] <= distance
-      for t in n[0].inhabitants
+      [ o, _, wx, wy ] = n
+      for t in o.inhabitants
         ret.push t
-        thing.others[t.id] ?= @universe.trig thing, t
+        thing.others[t.id] ?= @universe.trig thing, t, wx, wy
     ret
   # debugging methods
   drawRadius: (radius, inhabitants=true) ->
