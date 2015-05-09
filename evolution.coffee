@@ -23,7 +23,7 @@ sqrt   = Math.sqrt
 dfh.Universe = class Universe
   # default initialization parameters
   defaults: ->
-    torus: true
+    torus:  true
     width:  500
     height: 500
     cell:   20
@@ -515,7 +515,7 @@ dfh.Universe = class Universe
     h = @height
     if x - radius < 0 || x + radius >= w || y - radius < 0 || y + radius >= h
       if @torus
-        map points, (p) -> [ ( p[0] + w ) %% w, ( p[1] + h ) %% h ]
+        map points, (p) -> [ p[0] %% w, p[1] %% h ]
       else
         grep points, (p) -> 0 <= p[0] < w && 0 <= p[1] < h
     else
@@ -1120,8 +1120,8 @@ class Organism extends Thing
     w = @universe.width
     h = @universe.height
     if @universe.torus
-      x = ( x + w ) %% w
-      y = ( y + h ) %% h
+      x = x %% w
+      y = y %% h
     else
       if x < 0
         x *= -1
