@@ -1,5 +1,6 @@
 # code to wire the evolution code to the demo page
 initializationParameters =
+  torus: false
   cell: [ 20, 10, 50, 'scale at which universe is indexed; smaller numbers means more speed and more memory consumption' ]
   pause: [ 10, 0, 1000, 'minimum pause between ticks' ]
   maxDistance: [ 60, 30, 100, 'maximum distance an organism can see' ]
@@ -102,6 +103,12 @@ makeColorPicker = (label, object, parent) ->
     object[label] = s.value
     sp.innerHTML = s.value
 makeCheckbox = (label, obj, parent) ->
+  value = obj[label]
+  s = create 'input'
+  s.type = 'checkbox'
+  s.checked = value
+  parent.appendChild s
+  s.onchange = -> obj[label] = s.checked
 makeSlider = (label, object, parent) ->
   values = object[label]
   s = create 'input'
