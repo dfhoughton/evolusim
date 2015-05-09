@@ -191,25 +191,53 @@
         </p>
         <h3>Things in the Universe</h3>
         <h4><img class="stone float-left"> Stones</h4>
-        <p>All animals dislike stones.</p>
-        <h4><img class="plant float-left"> Plants</h4>
+        <p>
+          All animals dislike stones. This dislike is a fixed parameter -- it does not evolve. 
+          Also, if an animal moves onto a stone a powerful force will tend to force it to slip off in a direction
+          away from the center of the stone. The function of stones is to create barriers the user can place in the
+          universe to experiment and to provide shelter to plants, which are as happy to grow on a stone as anywhere.
+        </p>
+        <h4>Organisms</h4>
+        <p>
+          Organisms gather food from their environment, requiring a certain amount every tick of the clock to stay
+          alive. Their "health" is the maximum amount of food they can store. The ratio of their stored food to
+          their health determines whether they can have babies. When they reproduce, they lose some stored energy
+          and transfer some of this loss to their baby. To reproduce, they must find a location within a certain
+          radius of themselves where they can put the baby. They have a certain number of attempts in a certain
+          tick of the clock, a number which can evolve. If their environment is too crowded, they cannot reproduce.
+          Plants are crowded by other plants. Animals are crowded by other animals of any species and stones.
+        </p>
+        <h5><img class="plant float-left"> Plants</h5>
         <p>
           Plants are the foundation of the Evolusim food chain. They obtain a certain amount of energy from the environment
           with every tick. They are also the only organism that can disperse its babies far away from themselves.
         </p>
-        <h4><img class="herbivore float-left"> Herbivores</h4>
+        <h4>Animals</h4>
         <p>
-          Herbivores and predators can see, hear, move, and react to other things. "Hearing" allows an organism to
-          perceive things in any direction. "Seeing" allows an organism to perceive anything in a wedge in front of it.
-          Sight extends farther than hearing but it only covers an animals front. The larger an animals eyes, the farther
-          it can see. The larger its ears, the farther it can hear. The wider set its eyes, the wider its field of vision.
+          Animals can see, hear, move, and react. Animals have no memory but react to whatever they perceive at the
+          moment. If they touch a food source such that its center is within their radius, and are not completely full,
+          they will consume it. How they move is governed by their affinities to the things they see and the inverse
+          square of the distance between them (and the constant g). This creates a collection of vectors. These are
+          added up to create a net acceleration. Each species has a maximum acceleration, so this acceleration vector
+          may be trimmed. This is added to the animal's velocity. Again, each species also has a maximum velocity, so
+          this may also be trimmed. The animal is moved by adding its velocity vector to its position. The angle of
+          an animal's velocity vector, plus some random jitter, determines where it is facing after it moves.
         </p>
         <p>
-          An animal's maximum velocity is proportional to its radius. The faster an animal can accelerate, the longer its
-          tail.
+          An animal's maximum velocity and acceleration is proportional to its radius.
         </p>
-        <h4><img class="carnivore float-left"> Carnivores</h4>
-        <p>Carnivores like herbivores and, all else being equal, would rather hang out among the plants.</p>
+        <p>
+          "Hearing" allows an animal to perceive anything around within a certain distance. "Vision" allows it to
+          perceive things in front of it within a certain angle. Vision always extends somewhat farther than
+          hearing. The angle between an animal's eyes and the size of its eyes and hears (which reflects their range)
+          may all evolve.
+        </p>
+        <h5><img class="herbivore float-left"> Herbivores</h5>
+        <p>
+          Herbivores eat the plants.
+        </p>
+        <h5><img class="carnivore float-left"> Carnivores</h5>
+        <p>Carnivores eat the herbivores.</p>
       </div>
       <div id="options" class="table-y">
         <h4>Initialization Parameters</h4>
