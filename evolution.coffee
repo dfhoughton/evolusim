@@ -748,6 +748,9 @@ div = ( n, d ) -> floor n / d
 
 # randomization utility
 shuffle = (ar, dup=false) ->
+  unless ar.length
+    return [] if dup
+    return ar
   ar = [].concat ar if dup
   i = ar.length
   while --i
