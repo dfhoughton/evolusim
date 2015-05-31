@@ -155,7 +155,18 @@ makeUniverse = ->
         vtitle:    'Age (ticks)'
         collector: statCollector titleize(type), (d) -> u.tick - d.tick
         rows:      []
-      for gene, v of u.urThing(type).genes
+      geneSorter = (a, b) ->   # sort affinity genes last, otherwise alphabetically
+        return 0 if a == b
+        affA = /affinity/i.test a
+        affB = /affinity/i.test b
+        if affA || affB
+          if affA && affB
+            if a < b then -1 else 1
+          else
+            if affA then 1 else -1
+        else
+          if a < b then -1 else 1
+      for gene in ( g for g of u.urThing(type).genes ).sort geneSorter
         id = chartDiv tab, "#{type}-#{gene}"
         charts[gene] = geneChartSpec type, gene, id
 evoData =
