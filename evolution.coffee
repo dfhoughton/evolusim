@@ -29,6 +29,7 @@ dfh.Universe = class Universe
     cell:   20
     pause:  10
     maxDistance: 60
+    maxBabyTries: 10
     initialCreatures:
       stones: num: 40
       plants: num: 60
@@ -39,17 +40,18 @@ dfh.Universe = class Universe
     @canvas = document.getElementById id
     throw "I have no canvas!" unless @canvas
     @ctx = @canvas.getContext '2d'
-    @options     = options # keeping this around for some reason; probably unnecessary
-    @width       = @canvas.width
-    @height      = @canvas.height
-    @maxDim      = max @width, @height
-    @maxDistance = options.maxDistance || round( max( @width, @height ) / 3 )
-    @torus       = options.torus
-    @torus      ?= @defaults().torus
+    @options      = options # keeping this around for some reason; probably unnecessary
+    @width        = @canvas.width
+    @height       = @canvas.height
+    @maxDim       = max @width, @height
+    @maxDistance  = options.maxDistance || round( max( @width, @height ) / 3 )
+    @torus        = options.torus
+    @maxBabyTries = options.maxBabyTries || @defaults().maxBabyTries
+    @torus       ?= @defaults().torus
 
     # divide the universe into cells
     @cellWidth = options.cell || @defaults().cell
-    @cells = []
+    @cells     = []
     cellBuffer = []
     x = 0
     while x <= @width
@@ -64,17 +66,17 @@ dfh.Universe = class Universe
       x += @cellWidth
 
     @thingCount = 0
-    @geoPool = [ 0 ]
-    @geoData = [ null ]
-    @dotCache = {}
-    @idBase = 0
-    @tick   = 0
-    @pause = options.pause || defaults().pause 
-    @callback = options.callback || ->
-    dic = @defaults().initialCreatures
-    ic = @options.initialCreatures || dic
-    uni = @
-    used = {}
+    @geoPool    = [ 0 ]
+    @geoData    = [ null ]
+    @dotCache   = {}
+    @idBase     = 0
+    @tick       = 0
+    @pause      = options.pause || defaults().pause
+    @callback   = options.callback || ->
+    dic         = @defaults().initialCreatures
+    ic          = @options.initialCreatures || dic
+    uni         = @
+    used        = {}
 
     # geometry mechanism
     @geo = {
@@ -312,7 +314,7 @@ dfh.Universe = class Universe
   # moves a thing based on that things velocity, handling reflection off
   # the edges of the universe, or wrapping the universe if it is toroidal
   moveThing: (thing) ->
-    [ vx, vy ] = thing.velocity 
+    [ vx, vy ] = thing.velocity
     return unless vx || vy
     @change = true
     thing.x += vx
@@ -366,8 +368,9 @@ dfh.Universe = class Universe
     throw 'Universe used up!'
   # start the universe going
   run: ->
+    self = @
     @running = @started = true
-    @go()
+    requestAnimationFrame -> self.go()
   thingsCreated: -> @idBase
   currentThings: -> @thingCount
   countThing: (type) ->
@@ -542,23 +545,20 @@ dfh.Universe = class Universe
               ->
                 self.babies()
                 self.done = self.dead || !self.change
-                setTimeout(
-                  ->
-                    self.draw()
-                    setTimeout(
-                      ->
-                        self.callback(self)
-                        if self.running && !self.done
-                          pause = self.pause - new Date().getTime() + self.goTime.getTime()
-                          pause = 0 if pause < 0;
-                          setTimeout(
-                            -> self.go()
-                            pause
-                          )
-                      0
-                    )
-                  0
-                )
+                requestAnimationFrame ->
+                  self.draw()
+                  setTimeout(
+                    ->
+                      self.callback(self)
+                      if self.running && !self.done
+                        pause = self.pause - new Date().getTime() + self.goTime.getTime()
+                        pause = 0 if pause < 0;
+                        setTimeout(
+                          -> self.go()
+                          pause
+                        )
+                    0
+                  )
               0
             )
           0
@@ -1035,6 +1035,7 @@ class Organism extends Thing
     @mark       ?= null
     @belly      ?= 'white'
     @hr = @sickness = @topicColor = null
+    @maxTries   ?= @universe.maxBabyTries
   describe: ->
     description = super()
     description.health = @health()
@@ -1052,7 +1053,7 @@ class Organism extends Thing
       health: [ 10, 5, (t) -> 2 * t.health() ]
       babyCost: [ 1, 1, (t) -> t.health() / 2 ]
       babyThreshold: [ .5, .1, .9 ]
-      babyTries: [ 2, 1, (t) -> min( 100, t.babyTries() * 2 ) ]
+      babyTries: [ 2, 1, (t) -> min( t.maxTries, t.babyTries() * 2 ) ]
       mutationRate: [ .1, 0.01, 1 ]
       mutationRange: [ .1, 0.01, 1 ]
     }
@@ -1150,7 +1151,7 @@ class Organism extends Thing
             genes = @mitosis()
             @hp -= 1 + @babyCost()
             # put the baby in the cradle
-            baby = new @type( 
+            baby = new @type(
               pt
               {
                 universe:    @universe
@@ -1159,7 +1160,7 @@ class Organism extends Thing
                 radius:      @radius
                 bodyColor:   @bodyColor
                 inheritMark: @inheritMark
-                mark:        if @inheritMark then @mark else null
+                mark:        if @inheritMark then @mark  else null
                 belly:       if @inheritMark then @belly else null
                 generation:  @generation + 1
               }
@@ -1191,7 +1192,7 @@ class Organism extends Thing
       @universe.change = true
   cure: ->
     if @isSick() and @sickness.disease.cures @, @sickness.count
-      @sickness = null 
+      @sickness = null
       @universe.change = true
 
 class Plant extends Organism

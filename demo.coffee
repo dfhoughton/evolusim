@@ -4,6 +4,7 @@ initializationParameters =
   cell: [ 20, 10, 50, 'scale at which universe is indexed; smaller numbers means more speed and more memory consumption' ]
   pause: [ 10, 0, 1000, 'minimum pause between ticks' ]
   maxDistance: [ 60, 30, 100, 'maximum distance an organism can see' ]
+  maxBabyTries: [ 10, 1, 100, 'maximum number of times an organism attempts to find a place to spawn an offspring' ]
   initialCreatures:
     stones:
       num: [ 40, 0, 100 ]
