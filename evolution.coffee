@@ -23,14 +23,15 @@ sqrt   = Math.sqrt
 dfh.Universe = class Universe
   # default initialization parameters
   defaults: ->
-    torus:  true
-    width:  500
-    height: 500
-    cell:   20
-    pause:  10
-    maxDistance: 60
+    torus:        true
+    width:        500
+    height:       500
+    groundColor:  '#ffffff'
+    cell:         20
+    pause:        10
+    maxDistance:  60
     maxBabyTries: 10
-    seedCost: 0.4
+    seedCost:     0.4
     initialCreatures:
       stones: num: 40
       plants: num: 60
@@ -81,7 +82,7 @@ dfh.Universe = class Universe
     used        = {}
 
     # geometry mechanism
-    @geo = {
+    @geo =
       # memory allocator
       data: =>
         if @geoPool.length > 1
@@ -137,7 +138,6 @@ dfh.Universe = class Universe
         gd[ op + 2 ] = -gd[offset + 2]
         gd[ op + 3 ] = ( gd[ offset + 3 ] + 2 ) % 4
         op
-    }
 
     paramsForType = ( type, dontAdd ) ->
       params = dup( ic[type] || {} )['init'] || {}
@@ -163,6 +163,8 @@ dfh.Universe = class Universe
     @outline = 'yellow'  # color of things outlined around topic
     # various other instance variables
     @mxd = @fiddled = @change = @running = @started = @goTime = @done = @dead = @timer = null
+
+    @erase()
 
   # stamps out a png image representing a particular thing
   imageFor: (type) ->
@@ -660,8 +662,8 @@ dfh.Universe = class Universe
   # blank out the universe prior to redrawing everything
   erase: ->
     if @options.erase then @options.erase() else
-      c = @canvas
-      @ctx.clearRect 0, 0, c.width, c.height
+      @ctx.fillStyle = @options.groundColor
+      @ctx.fillRect 0, 0, @canvas.width, @canvas.height
   describe: ->
     @visitThings(
       (t) -> t.describe()

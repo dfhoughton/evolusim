@@ -6,6 +6,7 @@ initializationParameters =
   maxDistance: [ 60, 30, 100, 'maximum distance an organism can see' ]
   maxBabyTries: [ 10, 1, 100, 'maximum number of times an organism attempts to find a place to spawn an offspring' ]
   seedCost: [ 0.4, 0, 5, 'the cost of trying to spawn an offspring regardless of success', true ]
+  groundColor: '#ffffff'
   initialCreatures:
     stones:
       num: [ 40, 0, 100 ]
