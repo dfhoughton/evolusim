@@ -30,6 +30,7 @@ dfh.Universe = class Universe
     pause:  10
     maxDistance: 60
     maxBabyTries: 10
+    seedCost: 0.4
     initialCreatures:
       stones: num: 40
       plants: num: 60
@@ -48,6 +49,7 @@ dfh.Universe = class Universe
     @torus        = options.torus
     @maxBabyTries = options.maxBabyTries || @defaults().maxBabyTries
     @torus       ?= @defaults().torus
+    @seedCost     = options.seedCost || @defaults().seedCost
 
     # divide the universe into cells
     @cellWidth = options.cell || @defaults().cell
@@ -1145,11 +1147,14 @@ class Organism extends Thing
       # put babies in cradles
       for i in [1..n]
         for i in [1..@babyTries()]
+          break if @hp < @universe.seedCost
           pt = @babyPoint()
           column = cradles[pt[0]]
+          @hp -= @universe.seedCost
           if column and column[pt[1]]
+            @hp -= @babyCost()
+            break if @hp <= 0
             genes = @mitosis()
-            @hp -= 1 + @babyCost()
             # put the baby in the cradle
             baby = new @type(
               pt

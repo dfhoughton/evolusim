@@ -166,7 +166,7 @@
           energy -- the less likely it is to catch a disease or die of it once caught, and the more
           likely it is to rid itself of the disease once caught. The health factor modifies this
           effect. To get the contribution of health toward the probability of any one of these
-          outcomes one divides the health ratio by the health divisor.  
+          outcomes one divides the health ratio by the health divisor.
         </p>
         <input type="range" min="2" max="10" step="1" value="6" id="disease-health"><span></span>
         <h5>color</h5>
@@ -189,7 +189,8 @@
         </p>
         <p>
           The tabs to the right of this display Google charts representing the state of the simulation over time,
-          except the options tab, which allows you to control the starting state of the simulation.
+          except the fiddle tab, which allows you to modify the ongoing simulation, and the options tab,
+          which allows you to control the simulation's starting state.
         </p>
         <p>
           Evolusim has been tested under Chrome and Firefox. It runs slightly faster under Chrome, and Firefox pauses
@@ -198,7 +199,7 @@
         <h3>Things in the Universe</h3>
         <h4><img class="stone float-left"> Stones</h4>
         <p>
-          All animals dislike stones. This dislike is a fixed parameter -- it does not evolve. 
+          All animals dislike stones. This dislike is a fixed parameter -- it does not evolve.
           Also, if an animal moves onto a stone a powerful force will tend to force it to slip off in a direction
           away from the center of the stone. The function of stones is to create barriers the user can place in the
           universe to experiment and to provide shelter to plants, which are as happy to grow on a stone as anywhere.
@@ -210,8 +211,9 @@
           their health determines whether they can have babies. When they reproduce, they lose some stored energy
           and transfer some of this loss to their baby. To reproduce, they must find a location within a certain
           radius of themselves where they can put the baby. They have a certain number of attempts in a certain
-          tick of the clock, a number that can evolve. If their environment is too crowded, they cannot reproduce.
-          Plants are crowded by other plants. Animals are crowded by stones adnd other animals of any species.
+          tick of the clock. This "baby tries" number can itself evolve. Every attempt to reproduce incurs a
+          "seed cost" regardless of success. If an organisms environment is too crowded, it cannot reproduce.
+          Plants are crowded by other plants. Animals are crowded by stones and other animals of any species.
         </p>
         <h5><img class="plant float-left"> Plants</h5>
         <p>

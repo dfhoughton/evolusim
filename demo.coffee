@@ -5,6 +5,7 @@ initializationParameters =
   pause: [ 10, 0, 1000, 'minimum pause between ticks' ]
   maxDistance: [ 60, 30, 100, 'maximum distance an organism can see' ]
   maxBabyTries: [ 10, 1, 100, 'maximum number of times an organism attempts to find a place to spawn an offspring' ]
+  seedCost: [ 0.4, 0, 5, 'the cost of trying to spawn an offspring regardless of success', true ]
   initialCreatures:
     stones:
       num: [ 40, 0, 100 ]
@@ -114,11 +115,12 @@ makeSlider = (label, object, parent) ->
   values = object[label]
   s = create 'input'
   s.type = 'range'
-  s.value = values[0]
-  s.min = values[1]
-  s.max = values[2]
-  s.title = d if d = values[3]
-  s.step = 1
+  [ value, min, max, title, isFloat ] = values
+  s.value = value
+  s.min = min
+  s.max = max
+  s.title = title if title
+  s.step = if isFloat then 0.1 else 1
   sp = create 'span', 'param-value'
   sp.innerHTML = values[0]
   parent.appendChild s
@@ -450,7 +452,7 @@ crosshairCursor = (color='black') ->
       sibs.push child
       regTabs[child.innerHTML] = true if child.classList.contains 'reg'
       firstClick = child if child.innerHTML == 'about'
-      child.onclick = ( (c) -> 
+      child.onclick = ( (c) ->
         -> tabClicked c
         )(child)
       cd = byId "#{child.innerHTML}-chart"
@@ -494,7 +496,7 @@ crosshairCursor = (color='black') ->
       (e) ->
         u.setTopic e.offsetX + 8, e.offsetY + 8
       true
-    )    
+    )
   for id in [ 'disease-virulence', 'disease-mortality', 'disease-cure', 'disease-health' ]
     input = byId id
     input.nextSibling.innerHTML = input.value
