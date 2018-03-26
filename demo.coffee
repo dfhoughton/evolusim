@@ -49,13 +49,8 @@ titleize = (str) ->
   str.replace /\b[a-z]\w*/g, (s) -> s.charAt(0).toUpperCase() + s.substr(1).toLowerCase()
 text = (t) ->
   document.createTextNode(t)
-intFormat = (int) ->
-  ar = ( '' + int ).split('').reverse()
-  ar2 = []
-  for v, i in ar
-    ar2.push ',' if i && !( i % 3 )
-    ar2.push v
-  ar2.reverse().join ''
+prettyInt = (int) ->
+  (int).toLocaleString()
 create = (tag, cz, id) ->
   e = document.createElement(tag)
   e.setAttribute( 'class', cz ) if cz?
@@ -252,13 +247,13 @@ geneChartSpec = ( type, gene, id ) ->
   }
 collectData = ->
   evoData.generation += 1
-  byId('ticks').innerHTML = intFormat evoData.generation
-  byId('created').innerHTML = intFormat u.thingsCreated()
-  byId('current').innerHTML = intFormat u.currentThings()
-  byId('plant-count').innerHTML = intFormat u.plantCount()
-  byId('animal-count').innerHTML = intFormat u.animalCount()
-  byId('herbivore-count').innerHTML = intFormat u.herbivoreCount()
-  byId('carnivore-count').innerHTML = intFormat u.carnivoreCount()
+  byId('ticks').innerHTML = prettyInt evoData.generation
+  # byId('created').innerHTML = prettyInt u.thingsCreated()
+  # byId('current').innerHTML = prettyInt u.currentThings()
+  byId('plant-count').innerHTML = prettyInt u.plantCount()
+  byId('animal-count').innerHTML = prettyInt u.animalCount()
+  byId('herbivore-count').innerHTML = prettyInt u.herbivoreCount()
+  byId('carnivore-count').innerHTML = prettyInt u.carnivoreCount()
   if loaded and not munged
     e.remove() for e in byClass 'wait'
     munged = true

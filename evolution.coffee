@@ -295,14 +295,12 @@ dfh.Universe = class Universe
     c.draw()
   addThing: (thing) ->
     thing.id = @idBase += 1
-    @thingCount++
     @place thing
   remThing: (thing) ->
     thing.dead = true
     @change = true
     @topic = null if thing == @topic
     thing.cell.rem thing
-    @thingCount--
     for v in ( thing.marges || [] )
       @geoPool.push v
     for k, v of thing.others when v
@@ -376,7 +374,13 @@ dfh.Universe = class Universe
     @running = @started = true
     requestAnimationFrame -> self.go()
   thingsCreated: -> @idBase
-  currentThings: -> @thingCount
+  currentThings: ->
+    count = 0
+    @visitThings(
+      (t) -> count++
+      false, true
+    )
+    count
   countThing: (type) ->
     count = 0
     @visitThings(
